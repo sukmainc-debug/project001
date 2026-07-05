@@ -1,0 +1,639 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+
+/* =========================================================
+   TEMA "NOVA" — terinspirasi dashboard analitik dark-navy
+   bergaya neon: latar navy-ungu gelap, kartu melayang dengan
+   glow lembut, dan palet aksen warna-warni (violet, cyan,
+   pink, emas, teal) untuk grafik & badge metrik.
+   ========================================================= */
+:root{
+  --bg:#f4f4fc;--surface:#ffffff;--surface2:#f1f1fa;
+  --border:rgba(43,35,110,.08);--border2:rgba(43,35,110,.16);
+  --text:#191933;--text2:#5c5f89;--text3:#9497bf;
+  --accent:#6c4cf0;--accent-dark:#2c1f6b;--accent-light:#ece7ff;
+  --accent2:#f6b93b;--accent2-light:#fdf0d5;
+  --success:#14b88a;--success-bg:#e2f9f1;
+  --warning:#d9930f;--warning-bg:#fdf1da;
+  --danger:#e5487a;--danger-bg:#fde8f0;
+  --c-cyan:#0bc4e0;--c-pink:#ec4899;--c-violet:#8b5cf6;--c-gold:#f6b93b;--c-teal:#14b88a;
+  --radius:14px;--radius-lg:22px;
+  --shadow:0 14px 34px -14px rgba(43,35,110,.16),0 2px 8px rgba(43,35,110,.05);
+  --shadow-sm:0 4px 14px -6px rgba(43,35,110,.14);
+}
+[data-theme="dark"]{
+  --bg:#100f26;--surface:#191a3a;--surface2:#212349;
+  --border:rgba(255,255,255,.07);--border2:rgba(255,255,255,.15);
+  --text:#f3f4fd;--text2:#a3a7d6;--text3:#666b99;
+  --accent:#7c5cff;--accent-dark:#0c0c22;--accent-light:#2a2560;
+  --accent2:#ffc857;--accent2-light:#3a2c10;
+  --success:#2dd4a7;--success-bg:#0e2f27;
+  --warning:#ffc857;--warning-bg:#332508;
+  --danger:#ff5d8f;--danger-bg:#33122a;
+  --c-cyan:#22d3ee;--c-pink:#f472b6;--c-violet:#a78bfa;--c-gold:#ffc857;--c-teal:#2dd4a7;
+  --shadow:0 20px 45px -18px rgba(0,0,0,.6),0 4px 14px rgba(0,0,0,.35);
+  --shadow-sm:0 8px 22px -10px rgba(0,0,0,.5);
+}
+[data-theme="dark"] body{
+  background:
+    radial-gradient(900px 500px at 8% -8%,rgba(124,92,255,.16),transparent 60%),
+    radial-gradient(700px 480px at 100% 0%,rgba(34,211,238,.10),transparent 60%),
+    radial-gradient(800px 600px at 50% 110%,rgba(244,114,182,.08),transparent 60%),
+    var(--bg);
+  background-attachment:fixed;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Plus Jakarta Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.5}
+
+/* ===== Layout ===== */
+.sidebar{position:fixed;top:14px;left:14px;bottom:14px;width:232px;background:linear-gradient(165deg,var(--accent-dark),var(--accent-dark) 60%,#1a1650);border-radius:26px;display:flex;flex-direction:column;z-index:100;overflow-y:auto;box-shadow:var(--shadow);padding:6px}
+[data-theme="dark"] .sidebar{background:linear-gradient(165deg,#0c0c22,#141238 55%,#1c1550);position:fixed}
+[data-theme="dark"] .sidebar::before{content:'';position:absolute;top:-40px;left:-40px;width:160px;height:160px;border-radius:50%;background:radial-gradient(circle,rgba(124,92,255,.35),transparent 70%);pointer-events:none}
+.main{margin-left:262px;min-height:100vh}
+.topbar{background:var(--surface);border-bottom:none;border-radius:20px;margin:14px 18px 0;padding:12px 20px;height:auto;display:flex;align-items:center;justify-content:space-between;position:sticky;top:14px;z-index:50;box-shadow:var(--shadow-sm);gap:12px;flex-wrap:wrap}
+[data-theme="dark"] .topbar{background:rgba(25,26,58,.85);backdrop-filter:blur(10px);border:1px solid var(--border)}
+.page-content{padding:20px 18px 28px;max-width:1280px}
+
+/* ===== Sidebar ===== */
+.sidebar-logo{padding:16px 14px 16px;border-bottom:1px solid rgba(255,255,255,.12)}
+.sidebar-logo h1{font-size:16px;font-weight:800;color:#fff;display:flex;align-items:center;gap:8px}
+.sidebar-logo h1 em{color:var(--accent2);font-style:normal}
+.sidebar-logo small{font-size:10.5px;color:rgba(255,255,255,.55);margin-top:3px;display:block}
+.sidebar-nav{flex:1;padding:12px 8px}
+.nav-section{font-size:10px;font-weight:700;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:.09em;padding:14px 12px 6px}
+.nav-item{display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:16px;cursor:pointer;color:rgba(255,255,255,.72);font-size:13px;font-weight:500;transition:all .18s;margin-bottom:3px;user-select:none}
+.nav-item svg{flex-shrink:0;opacity:.9}
+.nav-item:hover{background:rgba(255,255,255,.08);color:#fff}
+.nav-item.active{background:var(--surface);color:var(--accent-dark);font-weight:700;box-shadow:0 6px 16px -4px rgba(0,0,0,.35)}
+.nav-item.active svg{color:var(--accent)}
+/* Mode gelap: --surface & --accent-dark sama-sama warna gelap (nyaris tak
+   berbeda), jadi tulisan menu aktif nyaris tak kelihatan. Override khusus
+   dark mode dengan kombinasi kontras tinggi: pil hijau mint terang + teks
+   gelap pekat, supaya tetap senada tema tapi jelas terbaca. */
+[data-theme="dark"] .nav-item.active{background:linear-gradient(135deg,var(--accent),var(--c-violet));color:#fff;box-shadow:0 6px 18px -4px rgba(124,92,255,.55)}
+[data-theme="dark"] .nav-item.active svg{color:#fff}
+.nav-badge{margin-left:auto;background:var(--accent2);color:#3a2c10;font-size:10px;padding:1px 7px;border-radius:20px;font-weight:800}
+
+/* ===== Sidebar user / account widget (menu login) ===== */
+.sidebar-user{position:relative;margin:8px 6px 6px;border-top:1px solid rgba(255,255,255,.12);padding-top:8px;flex-shrink:0}
+.su-trigger{width:100%;display:flex;align-items:center;gap:9px;padding:8px;border-radius:16px;border:none;background:rgba(255,255,255,.06);cursor:pointer;text-align:left;font-family:inherit;transition:background .15s}
+.su-trigger:hover{background:rgba(255,255,255,.12)}
+.su-avatar{flex-shrink:0;width:32px;height:32px;border-radius:50%;background:var(--accent2);color:#3a2c10;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;text-transform:uppercase}
+.su-info{flex:1;min-width:0}
+.su-name{font-size:12.5px;font-weight:700;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.su-role{font-size:10px;font-weight:700;margin-top:1px;color:rgba(255,255,255,.55)}
+.su-role.role-owner{color:var(--accent2)}
+.su-role.role-staff{color:#7db8ff}
+.su-role.role-kasir{color:#8fe0a8}
+.su-role.role-viewer{color:rgba(255,255,255,.55)}
+.su-chev{flex-shrink:0;color:rgba(255,255,255,.5);transition:transform .15s}
+.sidebar-user.open .su-chev{transform:rotate(180deg)}
+.su-menu{display:none;position:absolute;left:0;right:0;bottom:calc(100% + 8px);background:var(--surface);border-radius:16px;box-shadow:var(--shadow);padding:6px;border:1px solid var(--border)}
+.sidebar-user.open .su-menu{display:block}
+.su-menu-email{font-size:11px;color:var(--text3);padding:8px 10px 6px;word-break:break-all}
+.su-menu-item{width:100%;display:flex;align-items:center;gap:9px;padding:9px 10px;border:none;background:none;border-radius:11px;cursor:pointer;font-family:inherit;font-size:12.5px;font-weight:600;color:var(--text2);text-align:left}
+.su-menu-item:hover{background:var(--surface2);color:var(--text)}
+.su-menu-item svg{flex-shrink:0;opacity:.8}
+.su-menu-sep{height:1px;background:var(--border);margin:4px 2px}
+.su-menu-danger{color:#e5484d}
+.su-menu-danger:hover{background:rgba(229,72,77,.1);color:#e5484d}
+
+/* ===== Buttons ===== */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:30px;border:1px solid var(--border2);background:var(--surface);color:var(--text);font-size:13px;font-weight:600;cursor:pointer;transition:all .15s;font-family:inherit;white-space:nowrap}
+.btn:hover{background:var(--surface2);transform:translateY(-1px)}
+.btn-primary{background:linear-gradient(135deg,var(--accent),var(--c-violet));color:#fff;border-color:transparent;box-shadow:0 6px 16px -6px rgba(124,92,255,.5)}
+.btn-primary:hover{background:var(--accent-dark);opacity:1}
+.btn-sm{padding:6px 13px;font-size:12px}
+.btn-danger{background:var(--danger-bg);color:var(--danger);border-color:transparent}
+.btn-success{background:var(--success-bg);color:var(--success);border-color:transparent}
+.btn-warning{background:var(--warning-bg);color:var(--warning);border-color:transparent}
+.btn-icon{padding:6px 9px;font-size:13px;border-radius:12px}
+
+/* ===== Forms =====
+   Semua "kotak teks" (input pencarian, input form, textarea) disamakan
+   gayanya dengan kotak-kotak di halaman Laporan Keuangan (dropdown filter
+   & tombol periode: latar bersih var(--surface), border tipis var(--border2),
+   sudut membulat 12px) — supaya semua halaman terasa satu tema yang sama,
+   bukan campuran latar putih & latar hijau muda pudar seperti sebelumnya. */
+.form-select{padding:8px 12px;border-radius:12px;border:1px solid var(--border2);background:var(--surface);color:var(--text);font-size:13px;cursor:pointer;font-family:inherit}
+.form-input{padding:9px 13px;border-radius:12px;border:1px solid var(--border2);background:var(--surface);color:var(--text);font-size:13px;font-family:inherit;outline:none;width:100%;transition:border-color .15s,box-shadow .15s}
+.form-input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-light)}
+.form-group{margin-bottom:13px}
+.form-group label{display:block;font-size:12px;color:var(--text2);margin-bottom:5px;font-weight:600}
+.form-group textarea{width:100%;padding:9px 13px;border-radius:12px;border:1px solid var(--border2);background:var(--surface);color:var(--text);font-size:13px;font-family:inherit;resize:vertical;min-height:70px}
+
+
+/* ===== Cards & Grid ===== */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:20px 22px;margin-bottom:0;box-shadow:var(--shadow-sm)}
+.card-title{font-size:13.5px;font-weight:700;color:var(--text);margin-bottom:16px;display:flex;align-items:center;justify-content:space-between}
+.grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:18px}
+.grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:18px}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:18px}
+.mb18{margin-bottom:18px}
+
+/* Kartu metrik — DISAMAKAN PERSIS dengan bahasa desain kartu di Laporan
+   Keuangan (.fin-metric): badge ikon bulat di kiri-atas, label huruf
+   kapital kecil, dan latar bertingkat warna (m-accent/m-warning/m-danger/
+   m-success) alih-alih garis aksen di atas seperti versi lama. Dipakai di
+   Dashboard, Produk & Kategori, dan Laba per Produk supaya satu bahasa
+   visual dengan Laporan Keuangan. */
+.metric-card{position:relative;background:var(--surface2);border:1px solid var(--border);border-radius:16px;padding:16px 16px 14px;overflow:hidden;transition:transform .18s,box-shadow .18s}
+.metric-card::after{content:'';position:absolute;inset:0;background:radial-gradient(140px 90px at 100% 0%,rgba(255,255,255,.5),transparent 70%);opacity:0;transition:opacity .18s;pointer-events:none}
+[data-theme="dark"] .metric-card::after{background:radial-gradient(140px 90px at 100% 0%,rgba(255,255,255,.08),transparent 70%)}
+.metric-card:hover{transform:translateY(-2px);box-shadow:var(--shadow-sm)}
+.metric-card:hover::after{opacity:1}
+.metric-icon{width:34px;height:34px;border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:16px;margin-bottom:10px;background:var(--surface)}
+.metric-label{font-size:11.5px;color:var(--text3);font-weight:700;text-transform:uppercase;letter-spacing:.03em;margin-bottom:6px}
+.metric-value{font-size:19px;font-weight:800;color:var(--text);letter-spacing:-.3px}
+.metric-value-lg{font-size:26px}
+.metric-sub{font-size:11.5px;color:var(--text3);font-weight:600;margin-top:4px}
+.green{color:var(--success)}.red{color:var(--danger)}.orange{color:var(--warning)}
+.metric-card.m-accent{background:linear-gradient(160deg,var(--accent-light),var(--surface2))}
+.metric-card.m-accent .metric-icon{color:var(--accent)}
+.metric-card.m-warning{background:linear-gradient(160deg,var(--warning-bg),var(--surface2))}
+.metric-card.m-warning .metric-value{color:var(--warning)}
+.metric-card.m-danger{background:linear-gradient(160deg,var(--danger-bg),var(--surface2))}
+.metric-card.m-danger .metric-value{color:var(--danger)}
+.metric-card.m-success{background:linear-gradient(160deg,var(--success-bg),var(--surface2))}
+.metric-card.m-success .metric-value{color:var(--success)}
+/* Aksen garis warna-warni di puncak kartu metrik + variasi warna ikon
+   berbeda tiap kartu (cyan/violet/pink/emas) — gaya dashboard neon. */
+.metric-card{border-top:3px solid transparent}
+.grid-4 .metric-card:nth-of-type(4n+1){border-top-color:var(--c-cyan)}
+.grid-4 .metric-card:nth-of-type(4n+2){border-top-color:var(--c-violet)}
+.grid-4 .metric-card:nth-of-type(4n+3){border-top-color:var(--c-pink)}
+.grid-4 .metric-card:nth-of-type(4n+4){border-top-color:var(--c-gold)}
+.grid-4 .metric-card.m-accent:nth-of-type(4n+1) .metric-icon{color:var(--c-cyan)}
+.grid-4 .metric-card.m-accent:nth-of-type(4n+2) .metric-icon{color:var(--c-violet)}
+.grid-4 .metric-card.m-accent:nth-of-type(4n+3) .metric-icon{color:var(--c-pink)}
+
+/* Varian "hero" — dipakai untuk metrik laba/profit yang ingin ditonjolkan
+   (mis. "Estimasi Laba Bersih"), PERSIS sama dengan kartu hero di Laporan
+   Keuangan (.fin-metric-hero).
+   REVISI: sebelumnya kartu ini pakai gradasi hijau tua PEKAT + teks putih
+   paksa — kontrasnya keras dan tidak senada dengan kartu-kartu lembut/
+   pastel di sebelahnya (m-accent/m-warning/m-danger/m-success). Sekarang
+   disamakan ke keluarga warna pastel yang sama (accent-light/success-bg →
+   surface2, senada tema mint/hijau), tetap ditonjolkan lewat border warna
+   solid + glow bayangan lembut + teks besar & tebal, bukan lewat blok
+   warna pekat. */
+.metric-card.metric-hero{
+  background:linear-gradient(160deg,var(--success-bg),var(--surface2));
+  box-shadow:0 12px 28px -16px rgba(45,212,167,.35);
+}
+.metric-card.metric-hero.metric-hero-danger{
+  background:linear-gradient(160deg,var(--danger-bg),var(--surface2));
+  box-shadow:0 12px 28px -16px rgba(255,93,143,.35);
+}
+.metric-card.metric-hero .metric-icon{background:var(--surface);color:var(--success)}
+.metric-card.metric-hero.metric-hero-danger .metric-icon{color:var(--danger)}
+.metric-card.metric-hero .metric-label{color:var(--success)!important;opacity:.92}
+.metric-card.metric-hero.metric-hero-danger .metric-label{color:var(--danger)!important}
+.metric-card.metric-hero .metric-value{color:var(--text)!important}
+.metric-card.metric-hero .metric-sub{color:var(--success)!important;font-weight:700}
+.metric-card.metric-hero.metric-hero-danger .metric-sub{color:var(--danger)!important}
+
+/* Kartu hero yang sama juga dipakai di Laporan Keuangan (class fin-metric-hero) —
+   lihat definisi lengkap & alasan revisi warna lembut di bagian bawah file. */
+
+/* ===== Sections ===== */
+.section{display:none}.section.active{display:block}
+
+/* ===== Alert ===== */
+.alert{display:flex;align-items:flex-start;gap:10px;padding:12px 15px;border-radius:14px;font-size:13px;margin-bottom:10px}
+.alert-danger{background:var(--danger-bg);color:var(--danger);border:1px solid rgba(255,93,143,.25)}
+.alert-warning{background:var(--warning-bg);color:var(--warning);border:1px solid rgba(255,200,87,.3)}
+.alert-success{background:var(--success-bg);color:var(--success);border:1px solid rgba(45,212,167,.25)}
+
+/* ===== Table ===== */
+.table-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;padding:11px 14px;color:var(--text3);font-weight:700;font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid var(--border);white-space:nowrap;background:var(--surface2)}
+th:first-child{border-top-left-radius:12px;border-bottom-left-radius:12px}
+th:last-child{border-top-right-radius:12px;border-bottom-right-radius:12px}
+td{padding:11px 14px;border-bottom:1px solid var(--border);color:var(--text);vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:var(--surface2)}
+.mono{font-family:'SF Mono','Fira Mono',monospace;font-size:12px;color:var(--text2)}
+
+/* ===== Badges ===== */
+.badge{display:inline-flex;align-items:center;gap:3px;font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px}
+.badge-green{background:var(--success-bg);color:var(--success)}
+.badge-red{background:var(--danger-bg);color:var(--danger)}
+.badge-yellow{background:var(--warning-bg);color:var(--warning)}
+.badge-gray{background:var(--surface2);color:var(--text2)}
+.badge-blue{background:var(--accent-light);color:var(--accent)}
+.mp-tag{display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:20px}
+.mp-shopee{background:#ffece8;color:#c43a1f}
+.mp-tokopedia{background:#e6f7ee;color:#006b38}
+.mp-tiktok{background:#e8e8ea;color:#161823}
+.mp-lazada{background:#e8eaff;color:#1a0dab}
+[data-theme="dark"] .mp-shopee{background:#3d1208;color:#f87a5a}
+[data-theme="dark"] .mp-tokopedia{background:#0a2518;color:#4ade80}
+[data-theme="dark"] .mp-tiktok{background:#2a2a2a;color:#ccc}
+[data-theme="dark"] .mp-lazada{background:#12123a;color:#818cf8}
+
+/* ===== Progress bars ===== */
+.prog-row{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.prog-label{width:130px;flex-shrink:0;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.prog-track{flex:1;height:7px;background:var(--surface2);border-radius:6px;overflow:hidden}
+.prog-fill{height:100%;border-radius:6px;background:var(--accent)}
+.prog-val{width:80px;text-align:right;font-size:12px;color:var(--text2);flex-shrink:0}
+
+/* ===== Dashboard MP rows ===== */
+.mp-row{display:flex;align-items:center;padding:11px 0;border-bottom:1px solid var(--border);gap:10px}
+.mp-row:last-child{border-bottom:none}
+.mp-color-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.mp-name-col{width:108px;font-size:13px;font-weight:700;flex-shrink:0}
+.mp-bar-col{flex:1}
+.mp-bar-track{height:6px;background:var(--surface2);border-radius:6px;overflow:hidden}
+.mp-bar-fill{height:100%;border-radius:6px}
+.mp-rev-col{text-align:right;min-width:120px}
+.mp-rev{font-size:13px;font-weight:800}
+.mp-orders-txt{font-size:11px;color:var(--text3)}
+
+/* ===== Summary rows ===== */
+.sumrow{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--border);font-size:13px}
+.sumrow:last-child{border-bottom:none}
+.sumrow .label{color:var(--text2);font-weight:500}
+
+/* ===== Modal ===== */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(15,30,24,.55);z-index:999;align-items:center;justify-content:center;padding:16px;backdrop-filter:blur(2px)}
+.modal-overlay.open{display:flex}
+.modal{background:var(--surface);border-radius:26px;padding:26px;width:520px;max-width:100%;border:1px solid var(--border);max-height:90vh;overflow-y:auto;box-shadow:var(--shadow)}
+.modal h3{font-size:17px;font-weight:800;margin-bottom:18px;display:flex;align-items:center;gap:8px;color:var(--text)}
+.modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:18px}
+
+/* ===== Stok meter ===== */
+.stok-meter{display:flex;align-items:center;gap:6px}
+.stok-bar{width:48px;height:6px;background:var(--surface2);border-radius:6px;overflow:hidden}
+.stok-fill{height:100%;border-radius:6px}
+
+/* ===== Pagination ===== */
+.pagination{display:flex;align-items:center;gap:5px;justify-content:flex-end;margin-top:14px;flex-wrap:wrap}
+.page-btn{width:30px;height:30px;display:flex;align-items:center;justify-content:center;border-radius:10px;border:1px solid var(--border);cursor:pointer;font-size:12px;background:var(--surface);color:var(--text2);user-select:none;font-weight:600}
+.page-btn.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+.page-info{font-size:12px;color:var(--text3)}
+
+/* ===== Import drop zone ===== */
+.drop-zone{border:2px dashed var(--border2);border-radius:var(--radius-lg);padding:30px;text-align:center;cursor:pointer;color:var(--text2);transition:all .2s;background:var(--surface2)}
+.drop-zone:hover{border-color:var(--accent);background:var(--accent-light)}
+
+/* ===== Tab pills ===== */
+.tab-pills{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}
+.tab-pill{padding:7px 16px;border-radius:20px;border:1px solid var(--border2);background:var(--surface);color:var(--text2);font-size:13px;font-weight:600;cursor:pointer;transition:all .15s}
+.tab-pill.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+.laba-sub{display:none}.laba-sub.active{display:block}
+.inv-sub{display:none}.inv-sub.active{display:block}
+
+/* ===== Laba styles ===== */
+.laba-positive{color:var(--success);font-weight:700}
+.laba-negative{color:var(--danger);font-weight:700}
+.laba-neutral{color:var(--warning);font-weight:600}
+.margin-bar{display:flex;align-items:center;gap:6px}
+.margin-track{width:56px;height:6px;background:var(--surface2);border-radius:6px;overflow:hidden;flex-shrink:0}
+.margin-fill{height:100%;border-radius:6px}
+.info-box{background:var(--accent-light);border:1px solid rgba(124,92,255,.25);border-radius:14px;padding:13px 15px;font-size:12px;color:var(--accent-dark);margin-bottom:16px;line-height:1.6}
+[data-theme="dark"] .info-box{color:var(--accent)}
+.hpp-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px}
+.hpp-item{background:var(--surface2);border-radius:14px;padding:12px 14px}
+.hpp-item label{font-size:11px;color:var(--text3);display:block;margin-bottom:4px;font-weight:600}
+.hpp-item input{width:100%;padding:7px 9px;border-radius:9px;border:1px solid var(--border2);background:var(--surface);color:var(--text);font-size:13px;font-family:inherit}
+
+/* ===== Kategori tag ===== */
+.kat-tag{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;background:var(--accent-light);color:var(--accent-dark)}
+[data-theme="dark"] .kat-tag{color:var(--accent)}
+
+/* ===== Toggle dark mode ===== */
+.toggle-theme{width:38px;height:21px;background:var(--surface2);border-radius:20px;border:1px solid var(--border2);cursor:pointer;position:relative;transition:background .2s;flex-shrink:0}
+.toggle-theme::after{content:'';position:absolute;width:15px;height:15px;background:var(--accent);border-radius:50%;top:2px;left:2px;transition:transform .2s}
+[data-theme="dark"] .toggle-theme{background:var(--accent)}
+[data-theme="dark"] .toggle-theme::after{transform:translateX(17px);background:#fff}
+
+/* ===== Chart ===== */
+.chart-box{position:relative}
+
+/* ===== Search bar row ===== */
+.filter-row{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;align-items:center}
+
+/* ===== Color picker ===== */
+.color-swatch{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+.color-swatch span{width:24px;height:24px;border-radius:8px;cursor:pointer;border:2px solid transparent;transition:all .15s}
+.color-swatch span.selected{border-color:var(--text);transform:scale(1.1)}
+
+/* ===== Action cell ===== */
+.action-cell{display:flex;gap:4px;align-items:center}
+
+@media(max-width:900px){
+  .sidebar{width:64px;left:8px;top:8px;bottom:8px;border-radius:22px}
+  .sidebar-logo h1 em,.sidebar-logo small,.nav-item span,.nav-section{display:none}
+  .main{margin-left:88px}
+  .topbar{margin:8px 12px 0}
+  .grid-4{grid-template-columns:repeat(2,1fr)}
+  .grid-2,.grid-3{grid-template-columns:1fr}
+  .nav-item{justify-content:center;padding:11px}
+  .su-trigger{justify-content:center;padding:8px 4px}
+  .su-info,.su-chev{display:none}
+  .su-menu{left:4px;right:auto;width:220px}
+}
+@media(max-width:600px){
+  .grid-4{grid-template-columns:1fr 1fr}
+  .page-content{padding:12px}
+  .topbar{padding:0 12px}
+  .item-row{grid-template-columns:1fr 1fr!important}
+  .item-row .btn-danger{grid-column:1/-1;justify-self:end}
+}
+
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:10px}
+
+/* ===== Aksesibilitas & state yang sebelumnya belum ada gaya khususnya ===== */
+/* Tombol di-disable lewat JS saat proses submit (login/signup/dll), tapi
+   sebelumnya tidak ada gaya visual untuk state ini — user tidak tahu tombol
+   sedang nonaktif/berjalan. */
+.btn:disabled,.auth-btn-primary:disabled{opacity:.55;cursor:not-allowed;transform:none;pointer-events:none}
+/* Input readonly (mis. di modal Restock) sebelumnya terlihat identik dengan
+   input yang bisa diedit — membingungkan mana yang bisa diubah. */
+.form-input[readonly]{background:var(--surface2);color:var(--text2);cursor:not-allowed}
+/* Outline fokus keyboard yang konsisten (navigasi tanpa mouse). */
+a:focus-visible,button:focus-visible,.btn:focus-visible,.nav-item:focus-visible,
+.form-input:focus-visible,.form-select:focus-visible,.tab-pill:focus-visible{
+  outline:2px solid var(--accent);outline-offset:2px;
+}
+
+/* ===== LOGIN SCREEN ===== */
+#login-screen{padding:16px}
+#login-alert .alert{margin-bottom:12px}
+
+/* ===== CUSTOM LOGO ===== */
+.sidebar-logo img.app-logo{max-width:32px;max-height:32px;border-radius:9px;object-fit:contain}
+.sidebar-logo h1{display:flex;align-items:center;gap:8px}
+
+/* ===== MARKETPLACE MANAGEMENT LIST (mirip kat-list) ===== */
+.mp-manage-row{display:flex;align-items:center;justify-content:space-between;padding:9px 4px;border-bottom:1px solid var(--border);font-size:13px}
+.mp-manage-row:last-child{border-bottom:none}
+.mp-manage-left{display:flex;align-items:center;gap:8px}
+.mp-manage-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.mp-manage-actions{display:flex;gap:4px}
+
+/* ===== AUTH SCREEN (Login / Sign Up / Pending) — Modern Split Layout, tema mint/hijau ===== */
+.auth-screen{position:fixed;inset:0;z-index:1000;display:flex;background:var(--bg)}
+
+/* Panel kiri: branding gradient hijau tua -> mint */
+.auth-panel-left{
+  flex:1.1;position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center;
+  background:linear-gradient(135deg,#1a1240 0%,#4527a0 40%,#8b3fd6 70%,#e0479a 100%);
+  padding:48px;color:#fff;
+}
+[data-theme="dark"] .auth-panel-left{background:linear-gradient(135deg,#0a0a1f 0%,#241a5c 40%,#5b21b6 70%,#9d2669 100%)}
+.auth-brand-glow{
+  position:absolute;width:520px;height:520px;border-radius:50%;
+  background:radial-gradient(circle,rgba(246,185,59,.20) 0%,transparent 70%);
+  top:-120px;right:-120px;pointer-events:none;
+}
+.auth-brand-glow::after{
+  content:'';position:absolute;width:380px;height:380px;border-radius:50%;
+  background:radial-gradient(circle,rgba(255,255,255,.12) 0%,transparent 70%);
+  bottom:-260px;left:-180px;
+}
+.auth-brand-content{position:relative;z-index:2;max-width:440px}
+.auth-brand-logo{display:flex;align-items:center;gap:10px;font-size:19px;font-weight:800;margin-bottom:48px;color:#fff}
+.auth-brand-logo em{font-style:normal;opacity:.85;color:var(--accent2)}
+.auth-brand-logo img{max-width:30px;max-height:30px;border-radius:9px}
+.auth-brand-title{font-size:30px;font-weight:800;line-height:1.3;margin-bottom:16px;letter-spacing:-.5px}
+.auth-brand-sub{font-size:14px;line-height:1.7;color:rgba(255,255,255,.85);margin-bottom:40px}
+.auth-brand-stats{display:flex;gap:14px;flex-wrap:wrap}
+.auth-stat{display:flex;align-items:center;gap:10px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.18);border-radius:16px;padding:11px 14px;backdrop-filter:blur(6px)}
+.auth-stat-icon{font-size:18px}
+.auth-stat-label{font-size:12px;font-weight:800}
+.auth-stat-desc{font-size:11px;color:rgba(255,255,255,.7)}
+
+/* Panel kanan: form */
+.auth-panel-right{flex:1;display:flex;align-items:center;justify-content:center;position:relative;padding:32px;background:var(--bg)}
+.auth-theme-toggle{position:absolute;top:24px;right:28px;width:38px;height:38px;border-radius:50%;border:1px solid var(--border2);background:var(--surface);color:var(--text2);cursor:pointer;font-size:15px;display:flex;align-items:center;justify-content:center;transition:all .15s}
+.auth-theme-toggle:hover{background:var(--surface2);color:var(--text)}
+.auth-form-box{width:100%;max-width:380px;animation:authFadeIn .4s ease}
+@keyframes authFadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.auth-form-header{margin-bottom:28px}
+.auth-form-header h1{font-size:24px;font-weight:800;color:var(--text);margin-bottom:6px;letter-spacing:-.3px}
+.auth-form-header p{font-size:13px;color:var(--text3)}
+.auth-field{margin-bottom:16px}
+.auth-field label{display:block;font-size:12.5px;font-weight:700;color:var(--text2);margin-bottom:6px}
+.auth-input-wrap{position:relative;display:flex;align-items:center}
+.auth-input-icon{position:absolute;left:13px;color:var(--text3);pointer-events:none}
+.auth-input{
+  width:100%;padding:11px 14px 11px 38px;border-radius:14px;border:1.5px solid var(--border2);
+  background:var(--surface2);color:var(--text);font-size:13.5px;font-family:inherit;outline:none;
+  transition:border-color .15s,box-shadow .15s,background .15s;
+}
+.auth-input:focus{border-color:var(--accent);background:var(--surface);box-shadow:0 0 0 4px var(--accent-light)}
+.auth-input::placeholder{color:var(--text3)}
+.auth-btn-primary{
+  width:100%;padding:13px 16px;border-radius:14px;border:none;
+  background:linear-gradient(135deg,var(--accent),var(--accent-dark));color:#fff;font-size:14px;font-weight:700;
+  cursor:pointer;font-family:inherit;margin-top:6px;transition:transform .12s,box-shadow .12s;
+  box-shadow:0 6px 18px -4px rgba(124,92,255,.45);
+}
+.auth-btn-primary:hover{transform:translateY(-1px);box-shadow:0 8px 22px -4px rgba(124,92,255,.6)}
+.auth-btn-primary:active{transform:translateY(0)}
+.auth-btn-primary:disabled{opacity:.6;cursor:not-allowed;transform:none}
+.auth-switch-text{text-align:center;margin-top:18px;font-size:12.5px;color:var(--text3)}
+.auth-switch-text a{color:var(--accent);font-weight:700;text-decoration:none}
+.auth-switch-text a:hover{text-decoration:underline}
+.auth-pending-icon{font-size:46px;margin-bottom:10px;animation:authPulse 2s ease-in-out infinite}
+@keyframes authPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.08)}}
+
+@media(max-width:860px){
+  .auth-panel-left{display:none}
+  .auth-panel-right{padding:24px}
+}
+
+/* ===== PERIODE PICKER (dropdown periode custom bergaya date-range picker) ===== */
+.periode-picker{position:relative;display:inline-block}
+.periode-btn{
+  display:flex;align-items:center;gap:8px;padding:8px 14px;border-radius:12px;
+  border:1px solid var(--border2);background:var(--surface);cursor:pointer;font-family:inherit;
+  font-size:12.5px;color:var(--text);white-space:nowrap;max-width:340px;overflow:hidden
+}
+.periode-btn:hover{background:var(--surface2)}
+.periode-btn .pp-label{color:var(--text3);font-weight:500;flex-shrink:0}
+.periode-btn .pp-value{font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.periode-btn .pp-cal-icon{margin-left:2px;flex-shrink:0;opacity:.55}
+.periode-panel{
+  position:absolute;top:calc(100% + 8px);right:0;z-index:400;display:flex;
+  background:var(--surface);border:1px solid var(--border);border-radius:18px;box-shadow:var(--shadow);
+  overflow:hidden;min-width:640px
+}
+.pp-list{width:190px;flex-shrink:0;border-right:1px solid var(--border);padding:10px 0}
+.pp-item{padding:10px 18px;font-size:13px;color:var(--text);cursor:pointer;display:flex;align-items:center;justify-content:space-between;user-select:none}
+.pp-item:hover{background:var(--surface2)}
+.pp-item.pp-active{color:var(--accent);font-weight:700;background:var(--accent-light)}
+.pp-item .pp-chev{opacity:.5;font-size:13px}
+.pp-sep{height:1px;background:var(--border);margin:8px 0}
+.pp-side{width:340px;padding:16px 18px;min-height:280px}
+.pp-side:empty{display:none}
+.pp-cal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.pp-cal-title{font-size:14px;font-weight:800;color:var(--text)}
+.pp-cal-nav{width:26px;height:26px;border-radius:8px;border:none;background:transparent;color:var(--text2);cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center}
+.pp-cal-nav:hover{background:var(--surface2);color:var(--text)}
+.pp-cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;text-align:center}
+.pp-cal-grid.pp-cal-grid-head{margin-bottom:4px}
+.pp-cal-grid-head div{font-size:10.5px;font-weight:700;color:var(--text3);padding:4px 0}
+.pp-cal-day{padding:7px 0;font-size:12.5px;border-radius:9px;cursor:pointer;color:var(--text)}
+.pp-cal-day:hover{background:var(--surface2)}
+.pp-cal-day.pp-muted{color:var(--text3);opacity:.4;cursor:default;pointer-events:none}
+.pp-cal-day.pp-today{color:var(--accent);font-weight:800}
+.pp-cal-day.pp-selected{background:var(--accent);color:#fff;font-weight:800}
+.pp-bulan-grid,.pp-tahun-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px}
+.pp-bulan-item,.pp-tahun-item{padding:12px 6px;text-align:center;border-radius:12px;font-size:13px;font-weight:600;color:var(--text);cursor:pointer;background:var(--surface2)}
+.pp-bulan-item:hover,.pp-tahun-item:hover{background:var(--accent-light);color:var(--accent)}
+.pp-bulan-item.pp-selected,.pp-tahun-item.pp-selected{background:var(--accent);color:#fff}
+@media(max-width:640px){
+  .periode-panel{min-width:0;left:auto;right:0;flex-direction:column;max-height:80vh;overflow-y:auto}
+  .pp-list{width:100%;border-right:none;border-bottom:1px solid var(--border)}
+  .pp-side{width:100%}
+}
+
+/* =========================================================
+   LAPORAN KEUANGAN — kartu metrik "futuristik" & kop cetak
+   ========================================================= */
+/* Bar "Periode Data" di level halaman Laporan Keuangan — menegaskan kalau
+   periode ini mengendalikan seluruh konten di bawahnya (Ringkasan, chart,
+   Tren Bulanan), bukan cuma satu kartu saja. */
+.fin-periode-bar{
+  display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;
+  margin-bottom:16px;
+}
+/* Kartu "Tren Omzet"/"Tren Penjualan" — kesan futuristik lewat cincin
+   gradasi neon tipis di sekeliling kartu (dibuat dari 2 pseudo-element,
+   BUKAN teknik background-clip ganda — teknik itu ternyata tidak konsisten
+   dirender di semua browser dan memunculkan garis mirip grid). Warna isi
+   kartu tetap var(--surface) supaya konsisten dengan tema terang/gelap. */
+.fin-glow-card{position:relative;isolation:isolate}
+.fin-glow-card::before{
+  content:'';position:absolute;inset:-2px;border-radius:inherit;z-index:-2;
+  background:linear-gradient(120deg,#7f5af0,#2cb1bc,#e63986,#7f5af0);
+  background-size:300% 300%;animation:finGlowShift 10s ease infinite;
+}
+.fin-glow-card::after{
+  content:'';position:absolute;inset:1px;border-radius:inherit;z-index:-1;
+  background:var(--surface);
+}
+.fin-glow-card>*{position:relative;z-index:1}
+@keyframes finGlowShift{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
+@media print{.fin-glow-card::before,.fin-glow-card::after{display:none}.fin-glow-card{border:1px solid #ddd}}
+.fin-hero{position:relative;overflow:hidden}
+.fin-metric-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.fin-metric{position:relative;background:var(--surface2);border:1px solid var(--border);border-radius:16px;padding:20px 20px 18px;overflow:hidden;transition:transform .18s,box-shadow .18s}
+.fin-metric::after{content:'';position:absolute;inset:0;background:radial-gradient(120px 80px at 100% 0%,rgba(255,255,255,.5),transparent 70%);opacity:0;transition:opacity .18s;pointer-events:none}
+[data-theme="dark"] .fin-metric::after{background:radial-gradient(120px 80px at 100% 0%,rgba(255,255,255,.08),transparent 70%)}
+.fin-metric:hover{transform:translateY(-2px);box-shadow:var(--shadow-sm)}
+.fin-metric:hover::after{opacity:1}
+.fin-metric-icon{width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:19px;margin-bottom:12px;background:var(--surface)}
+.fin-metric-label{font-size:12.5px;color:var(--text3);font-weight:700;text-transform:uppercase;letter-spacing:.03em;margin-bottom:8px}
+.fin-metric-value{font-size:25px;font-weight:800;color:var(--text);letter-spacing:-.4px}
+.fin-metric-value-lg{font-size:30px}
+.fin-metric-sub{font-size:12.5px;color:var(--text3);font-weight:600;margin-top:6px}
+.fin-metric.fm-accent{background:linear-gradient(160deg,var(--accent-light),var(--surface2))}
+.fin-metric.fm-accent .fin-metric-icon{color:var(--accent)}
+.fin-metric.fm-accent .fin-metric-label{color:var(--accent-dark)!important}
+[data-theme="dark"] .fin-metric.fm-accent .fin-metric-label{color:var(--accent)!important}
+.fin-metric.fm-warning{background:linear-gradient(160deg,var(--warning-bg),var(--surface2))}
+.fin-metric.fm-warning .fin-metric-value{color:var(--warning)}
+.fin-metric.fm-danger{background:linear-gradient(160deg,var(--danger-bg),var(--surface2))}
+.fin-metric.fm-danger .fin-metric-value{color:var(--danger)}
+.fin-metric.fm-success{background:linear-gradient(160deg,var(--success-bg),var(--surface2))}
+.fin-metric.fm-success .fin-metric-value{color:var(--success)}
+.fin-metric.fm-success .fin-metric-label{color:var(--success)!important}
+/* Garis aksen warna-warni di puncak tiap kartu metrik keuangan, mengikuti
+   urutan kartu (Omzet→cyan, HPP→pink, Opex→violet, Margin→emas,
+   Laba→teal, Pesanan→cyan) — gaya neon multi-warna seperti dashboard
+   referensi, tanpa mengubah makna semantik warna nilai di dalamnya. */
+.fin-metric{border-top:3px solid transparent}
+.fin-metric-grid .fin-metric:nth-of-type(6n+1){border-top-color:var(--c-cyan)}
+.fin-metric-grid .fin-metric:nth-of-type(6n+2){border-top-color:var(--c-pink)}
+.fin-metric-grid .fin-metric:nth-of-type(6n+3){border-top-color:var(--c-violet)}
+.fin-metric-grid .fin-metric:nth-of-type(6n+4){border-top-color:var(--c-gold)}
+.fin-metric-grid .fin-metric:nth-of-type(6n+5){border-top-color:var(--c-teal)}
+.fin-metric-grid .fin-metric:nth-of-type(6n+6){border-top-color:var(--c-cyan)}
+@media(max-width:980px){
+  .fin-metric-grid{grid-template-columns:repeat(2,1fr)}
+}
+@media(max-width:560px){
+  .fin-metric-grid{grid-template-columns:1fr}
+}
+/* REVISI: kartu hero ini sebelumnya pakai gradasi hijau tua PEKAT + teks
+   putih paksa (kontras keras, tidak senada kartu pastel di sekitarnya).
+   Disamakan ke keluarga warna pastel yang sama dengan kartu m-success/
+   fm-success (accent-light/success-bg → surface2), tetap ditonjolkan lewat
+   border warna solid + glow bayangan lembut, konsisten dengan kartu hero
+   di Dashboard & Laba per Produk (.metric-card.metric-hero). */
+/* CATATAN: kartu "Total Omzet" & "Estimasi Laba Bersih" di Laporan Keuangan
+   TIDAK LAGI pakai kartu "hero" full-width terpisah (class fin-metric-top/
+   fin-metric-hero sudah dihapus) — sekarang keduanya adalah kartu biasa
+   (.fin-metric.fm-accent / .fin-metric.fm-success) yang sejajar rapi 1
+   grid yang sama dengan kartu rincian biaya lainnya, hanya dibedakan lewat
+   warna border+ikon. Ukuran font kartu ini juga sudah diperbesar di atas
+   (.fin-metric-value 25px) supaya tetap mudah dibaca walau tidak lagi
+   dibesarkan lewat ukuran kartu itu sendiri. */
+@media(max-width:980px){
+  .fin-metric-grid{grid-template-columns:repeat(2,1fr)}
+}
+@media(max-width:560px){
+  .fin-metric-grid{grid-template-columns:1fr}
+}
+
+
+/* Kop & footer halaman untuk file cetak — tersembunyi di layar, muncul saat print */
+.fin-print-header{display:none}
+.fin-print-footer{display:none}
+
+/* =========================================================
+   MODE CETAK — dipicu tombol "🖨 Cetak Laporan" (window.print()).
+   Sembunyikan chrome aplikasi (sidebar, topbar, tombol aksi, filter
+   interaktif) dan tampilkan kop laporan + konten Laporan Keuangan saja
+   dengan tata letak rapi hitam-putih ramah printer, tetap mempertahankan
+   aksen warna secukupnya untuk kesan modern di kertas.
+   ========================================================= */
+@media print{
+  @page{margin:14mm}
+  body{background:#fff!important}
+  .sidebar,.topbar,.no-print,#login-screen,.modal-overlay,.toast-container{display:none!important}
+  .main{margin-left:0!important}
+  .page-content{padding:0!important;max-width:100%!important}
+  .section{display:none!important}
+  .section.active{display:block!important}
+  .card{box-shadow:none!important;border:1px solid #ddd!important;break-inside:avoid;page-break-inside:avoid;margin-bottom:12px!important}
+  .fin-metric{break-inside:avoid;box-shadow:none!important}
+  .fin-print-header{
+    display:flex!important;align-items:center;justify-content:space-between;
+    padding-bottom:14px;margin-bottom:16px;border-bottom:2.5px solid var(--accent-dark);
+  }
+  .fin-print-brand{display:flex;align-items:center;gap:10px}
+  .fin-print-brand img{width:36px;height:36px;border-radius:9px;object-fit:cover}
+  .fin-print-toko{font-size:16px;font-weight:800;color:#111}
+  .fin-print-sub{font-size:11px;color:#666;font-weight:600;margin-top:2px}
+  .fin-print-meta{text-align:right;font-size:11px;color:#444;font-weight:600;line-height:1.7}
+  /* Grid 2 kolom diubah jadi 1 kolom saat dicetak — chart jauh lebih
+     terbaca di kertas kalau full-width daripada berdempetan 2 kolom sempit. */
+  .grid-2{grid-template-columns:1fr!important;gap:12px!important}
+  .fin-metric-grid{gap:10px!important}
+  .card-title{font-size:13px!important;margin-bottom:10px!important}
+  .chart-box{height:200px!important;break-inside:avoid;page-break-inside:avoid}
+  canvas{max-width:100%!important}
+  /* Footer cetak: disclaimer + kolom tanda tangan, cuma muncul di kertas */
+  .fin-print-footer{
+    display:block!important;margin-top:22px;padding-top:14px;border-top:1px solid #ccc;
+    break-inside:avoid;page-break-inside:avoid;
+  }
+  .fin-print-disclaimer{font-size:10px;color:#777;line-height:1.6;margin-bottom:26px}
+  .fin-print-sign{display:flex;justify-content:space-between;max-width:420px;margin-left:auto;gap:40px}
+  .fin-print-sign-box{flex:1;text-align:center;font-size:11px;color:#444}
+  .fin-print-sign-line{border-top:1px solid #999;margin-bottom:6px;height:46px}
+}
+
+/* Sembunyikan data Laba/Margin di menu Penjualan khusus untuk role Kasir
+   (lihat applyNavVisibility() di app.js yang menambahkan class ini ke
+   <body>). Owner/Staff/Viewer tidak terpengaruh — mereka tetap melihat
+   kolom Laba/Margin di tabel & kartu estimasi di modal Tambah Pesanan. */
+body.hide-sensitive-laba .sensitive-col{display:none}
