@@ -40,15 +40,14 @@
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{height:100%}
 body{font-family:'Plus Jakarta Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:var(--text);font-size:14px;line-height:1.5;
-  background:linear-gradient(160deg,#eef3fc 0%,#e6eefb 55%,#dee9f9 100%);
-  min-height:100vh;display:flex;align-items:flex-start;justify-content:center;padding:26px 22px;
+  background:var(--shell-bg2);
+  min-height:100vh;
 }
 
-/* ===== Layout: satu "shell" gelap besar melayang, sidebar + main di dalamnya ===== */
-#app-wrap{display:flex;width:100%;max-width:1580px;margin:0 auto;background:var(--shell-bg2);
-  border-radius:32px;overflow:hidden;border:1px solid rgba(255,255,255,.5);
-  box-shadow:0 45px 90px -28px rgba(15,23,42,.45),0 16px 38px -16px rgba(15,23,42,.22);
-  height:calc(100vh - 52px);
+/* ===== Layout: sidebar + main mengisi penuh layar browser (edge-to-edge) ===== */
+#app-wrap{display:flex;width:100%;background:var(--shell-bg2);
+  border-radius:0;overflow:hidden;border:none;box-shadow:none;
+  height:100vh;
 }
 .sidebar{position:static;width:230px;flex-shrink:0;background:linear-gradient(195deg,#0b0d13,#161a24 60%,#1a1e2b);
   border-radius:0;display:flex;flex-direction:column;overflow-y:auto;box-shadow:none;padding:8px;
@@ -57,11 +56,6 @@ body{font-family:'Plus Jakarta Sans',-apple-system,BlinkMacSystemFont,'Segoe UI'
 .main{flex:1;min-width:0;display:flex;flex-direction:column;background:var(--bg);overflow-y:auto}
 .topbar{background:var(--bg);border-bottom:1px solid var(--border);border-radius:0;margin:0;padding:16px 26px;height:auto;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50;box-shadow:none;gap:12px;flex-wrap:wrap}
 .page-content{padding:22px 26px 34px;max-width:1400px}
-
-@media(max-width:900px){
-  body{padding:0}
-  #app-wrap{border-radius:0;height:100vh;border:none}
-}
 
 /* ===== Sidebar ===== */
 .sidebar-logo{padding:16px 14px 16px;border-bottom:1px solid rgba(255,255,255,.12)}
