@@ -1,57 +1,67 @@
 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
 
 /* =========================================================
-   TEMA "NOVA" — terinspirasi dashboard analitik dark-navy
-   bergaya neon: latar navy-ungu gelap, kartu melayang dengan
-   glow lembut, dan palet aksen warna-warni (violet, cyan,
-   pink, emas, teal) untuk grafik & badge metrik.
+   TEMA "AURORA DASHBOARD" — didesain ulang mengikuti referensi
+   dashboard analitik: satu "shell" gelap besar melayang di atas
+   latar biru pucat, sidebar/topbar navy-hitam pekat, kartu datar
+   dengan aksen biru tunggal, dan grafik bergaya monokrom biru +
+   sorotan warna semantik (hijau/merah/amber) secukupnya saja.
    ========================================================= */
 :root{
-  --bg:#f4f4fc;--surface:#ffffff;--surface2:#f1f1fa;
-  --border:rgba(43,35,110,.08);--border2:rgba(43,35,110,.16);
-  --text:#191933;--text2:#5c5f89;--text3:#9497bf;
-  --accent:#6c4cf0;--accent-dark:#2c1f6b;--accent-light:#ece7ff;
-  --accent2:#f6b93b;--accent2-light:#fdf0d5;
-  --success:#14b88a;--success-bg:#e2f9f1;
-  --warning:#d9930f;--warning-bg:#fdf1da;
-  --danger:#e5487a;--danger-bg:#fde8f0;
-  --c-cyan:#0bc4e0;--c-pink:#ec4899;--c-violet:#8b5cf6;--c-gold:#f6b93b;--c-teal:#14b88a;
-  --radius:14px;--radius-lg:22px;
-  --shadow:0 14px 34px -14px rgba(43,35,110,.16),0 2px 8px rgba(43,35,110,.05);
-  --shadow-sm:0 4px 14px -6px rgba(43,35,110,.14);
+  --outer-bg:#e8eefb;
+  --shell-bg:#12141c;--shell-bg2:#181b26;
+  --bg:#f3f5fa;--surface:#ffffff;--surface2:#eef1f8;
+  --border:rgba(15,23,42,.08);--border2:rgba(15,23,42,.14);
+  --text:#0f1523;--text2:#57607a;--text3:#8993ad;
+  --accent:#3b82f6;--accent-dark:#1d4ed8;--accent-light:#e6efff;
+  --accent2:#0ea5e9;--accent2-light:#e1f4fd;
+  --success:#0ea472;--success-bg:#e3f8f0;
+  --warning:#d97706;--warning-bg:#fdf1de;
+  --danger:#dc2626;--danger-bg:#fbe8e8;
+  --c-cyan:#0891b2;--c-pink:#db2777;--c-violet:#6366f1;--c-gold:#d97706;--c-teal:#0ea472;
+  --radius:14px;--radius-lg:20px;
+  --shadow:0 14px 34px -14px rgba(15,23,42,.16),0 2px 8px rgba(15,23,42,.05);
+  --shadow-sm:0 4px 14px -6px rgba(15,23,42,.1);
 }
 [data-theme="dark"]{
-  --bg:#100f26;--surface:#191a3a;--surface2:#212349;
-  --border:rgba(255,255,255,.07);--border2:rgba(255,255,255,.15);
-  --text:#f3f4fd;--text2:#a3a7d6;--text3:#666b99;
-  --accent:#7c5cff;--accent-dark:#0c0c22;--accent-light:#2a2560;
-  --accent2:#ffc857;--accent2-light:#3a2c10;
-  --success:#2dd4a7;--success-bg:#0e2f27;
-  --warning:#ffc857;--warning-bg:#332508;
-  --danger:#ff5d8f;--danger-bg:#33122a;
-  --c-cyan:#22d3ee;--c-pink:#f472b6;--c-violet:#a78bfa;--c-gold:#ffc857;--c-teal:#2dd4a7;
+  --outer-bg:#e8eefb;
+  --bg:#0d0f17;--surface:#161922;--surface2:#1c202b;
+  --border:rgba(255,255,255,.07);--border2:rgba(255,255,255,.14);
+  --text:#f4f6fc;--text2:#9aa3ba;--text3:#5b6480;
+  --accent:#3b82f6;--accent-dark:#93c5fd;--accent-light:rgba(59,130,246,.16);
+  --accent2:#22d3ee;--accent2-light:rgba(34,211,238,.14);
+  --success:#34d399;--success-bg:rgba(52,211,153,.14);
+  --warning:#fbbf24;--warning-bg:rgba(251,191,36,.14);
+  --danger:#f87171;--danger-bg:rgba(248,113,113,.14);
+  --c-cyan:#22d3ee;--c-pink:#f472b6;--c-violet:#818cf8;--c-gold:#fbbf24;--c-teal:#34d399;
   --shadow:0 20px 45px -18px rgba(0,0,0,.6),0 4px 14px rgba(0,0,0,.35);
   --shadow-sm:0 8px 22px -10px rgba(0,0,0,.5);
 }
-[data-theme="dark"] body{
-  background:
-    radial-gradient(900px 500px at 8% -8%,rgba(124,92,255,.16),transparent 60%),
-    radial-gradient(700px 480px at 100% 0%,rgba(34,211,238,.10),transparent 60%),
-    radial-gradient(800px 600px at 50% 110%,rgba(244,114,182,.08),transparent 60%),
-    var(--bg);
-  background-attachment:fixed;
-}
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:'Plus Jakarta Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.5}
+html,body{height:100%}
+body{font-family:'Plus Jakarta Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:var(--text);font-size:14px;line-height:1.5;
+  background:linear-gradient(160deg,#eef3fc 0%,#e6eefb 55%,#dee9f9 100%);
+  min-height:100vh;display:flex;align-items:flex-start;justify-content:center;padding:26px 22px;
+}
 
-/* ===== Layout ===== */
-.sidebar{position:fixed;top:14px;left:14px;bottom:14px;width:232px;background:linear-gradient(165deg,var(--accent-dark),var(--accent-dark) 60%,#1a1650);border-radius:26px;display:flex;flex-direction:column;z-index:100;overflow-y:auto;box-shadow:var(--shadow);padding:6px}
-[data-theme="dark"] .sidebar{background:linear-gradient(165deg,#0c0c22,#141238 55%,#1c1550);position:fixed}
-[data-theme="dark"] .sidebar::before{content:'';position:absolute;top:-40px;left:-40px;width:160px;height:160px;border-radius:50%;background:radial-gradient(circle,rgba(124,92,255,.35),transparent 70%);pointer-events:none}
-.main{margin-left:262px;min-height:100vh}
-.topbar{background:var(--surface);border-bottom:none;border-radius:20px;margin:14px 18px 0;padding:12px 20px;height:auto;display:flex;align-items:center;justify-content:space-between;position:sticky;top:14px;z-index:50;box-shadow:var(--shadow-sm);gap:12px;flex-wrap:wrap}
-[data-theme="dark"] .topbar{background:rgba(25,26,58,.85);backdrop-filter:blur(10px);border:1px solid var(--border)}
-.page-content{padding:20px 18px 28px;max-width:1280px}
+/* ===== Layout: satu "shell" gelap besar melayang, sidebar + main di dalamnya ===== */
+#app-wrap{display:flex;width:100%;max-width:1580px;margin:0 auto;background:var(--shell-bg2);
+  border-radius:32px;overflow:hidden;border:1px solid rgba(255,255,255,.5);
+  box-shadow:0 45px 90px -28px rgba(15,23,42,.45),0 16px 38px -16px rgba(15,23,42,.22);
+  height:calc(100vh - 52px);
+}
+.sidebar{position:static;width:230px;flex-shrink:0;background:linear-gradient(195deg,#0b0d13,#161a24 60%,#1a1e2b);
+  border-radius:0;display:flex;flex-direction:column;overflow-y:auto;box-shadow:none;padding:8px;
+  border-right:1px solid rgba(255,255,255,.06);
+}
+.main{flex:1;min-width:0;display:flex;flex-direction:column;background:var(--bg);overflow-y:auto}
+.topbar{background:var(--bg);border-bottom:1px solid var(--border);border-radius:0;margin:0;padding:16px 26px;height:auto;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50;box-shadow:none;gap:12px;flex-wrap:wrap}
+.page-content{padding:22px 26px 34px;max-width:1400px}
+
+@media(max-width:900px){
+  body{padding:0}
+  #app-wrap{border-radius:0;height:100vh;border:none}
+}
 
 /* ===== Sidebar ===== */
 .sidebar-logo{padding:16px 14px 16px;border-bottom:1px solid rgba(255,255,255,.12)}
@@ -63,21 +73,15 @@ body{font-family:'Plus Jakarta Sans',-apple-system,BlinkMacSystemFont,'Segoe UI'
 .nav-item{display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:16px;cursor:pointer;color:rgba(255,255,255,.72);font-size:13px;font-weight:500;transition:all .18s;margin-bottom:3px;user-select:none}
 .nav-item svg{flex-shrink:0;opacity:.9}
 .nav-item:hover{background:rgba(255,255,255,.08);color:#fff}
-.nav-item.active{background:var(--surface);color:var(--accent-dark);font-weight:700;box-shadow:0 6px 16px -4px rgba(0,0,0,.35)}
-.nav-item.active svg{color:var(--accent)}
-/* Mode gelap: --surface & --accent-dark sama-sama warna gelap (nyaris tak
-   berbeda), jadi tulisan menu aktif nyaris tak kelihatan. Override khusus
-   dark mode dengan kombinasi kontras tinggi: pil hijau mint terang + teks
-   gelap pekat, supaya tetap senada tema tapi jelas terbaca. */
-[data-theme="dark"] .nav-item.active{background:linear-gradient(135deg,var(--accent),var(--c-violet));color:#fff;box-shadow:0 6px 18px -4px rgba(124,92,255,.55)}
-[data-theme="dark"] .nav-item.active svg{color:#fff}
-.nav-badge{margin-left:auto;background:var(--accent2);color:#3a2c10;font-size:10px;padding:1px 7px;border-radius:20px;font-weight:800}
+.nav-item.active{background:linear-gradient(135deg,#3b82f6,#2563eb);color:#fff;font-weight:700;box-shadow:0 8px 20px -6px rgba(59,130,246,.55)}
+.nav-item.active svg{color:#fff}
+.nav-badge{margin-left:auto;background:var(--danger);color:#fff;font-size:10px;padding:1px 7px;border-radius:20px;font-weight:800}
 
 /* ===== Sidebar user / account widget (menu login) ===== */
 .sidebar-user{position:relative;margin:8px 6px 6px;border-top:1px solid rgba(255,255,255,.12);padding-top:8px;flex-shrink:0}
 .su-trigger{width:100%;display:flex;align-items:center;gap:9px;padding:8px;border-radius:16px;border:none;background:rgba(255,255,255,.06);cursor:pointer;text-align:left;font-family:inherit;transition:background .15s}
 .su-trigger:hover{background:rgba(255,255,255,.12)}
-.su-avatar{flex-shrink:0;width:32px;height:32px;border-radius:50%;background:var(--accent2);color:#3a2c10;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;text-transform:uppercase}
+.su-avatar{flex-shrink:0;width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;text-transform:uppercase}
 .su-info{flex:1;min-width:0}
 .su-name{font-size:12.5px;font-weight:700;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .su-role{font-size:10px;font-weight:700;margin-top:1px;color:rgba(255,255,255,.55)}
@@ -100,7 +104,7 @@ body{font-family:'Plus Jakarta Sans',-apple-system,BlinkMacSystemFont,'Segoe UI'
 /* ===== Buttons ===== */
 .btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:30px;border:1px solid var(--border2);background:var(--surface);color:var(--text);font-size:13px;font-weight:600;cursor:pointer;transition:all .15s;font-family:inherit;white-space:nowrap}
 .btn:hover{background:var(--surface2);transform:translateY(-1px)}
-.btn-primary{background:linear-gradient(135deg,var(--accent),var(--c-violet));color:#fff;border-color:transparent;box-shadow:0 6px 16px -6px rgba(124,92,255,.5)}
+.btn-primary{background:linear-gradient(135deg,var(--accent),var(--accent-dark));color:#fff;border-color:transparent;box-shadow:0 6px 16px -6px rgba(59,130,246,.5)}
 .btn-primary:hover{background:var(--accent-dark);opacity:1}
 .btn-sm{padding:6px 13px;font-size:12px}
 .btn-danger{background:var(--danger-bg);color:var(--danger);border-color:transparent}
@@ -141,7 +145,7 @@ body{font-family:'Plus Jakarta Sans',-apple-system,BlinkMacSystemFont,'Segoe UI'
 [data-theme="dark"] .metric-card::after{background:radial-gradient(140px 90px at 100% 0%,rgba(255,255,255,.08),transparent 70%)}
 .metric-card:hover{transform:translateY(-2px);box-shadow:var(--shadow-sm)}
 .metric-card:hover::after{opacity:1}
-.metric-icon{width:34px;height:34px;border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:16px;margin-bottom:10px;background:var(--surface)}
+.metric-icon{width:34px;height:34px;border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:16px;margin-bottom:10px;background:var(--accent-light)}
 .metric-label{font-size:11.5px;color:var(--text3);font-weight:700;text-transform:uppercase;letter-spacing:.03em;margin-bottom:6px}
 .metric-value{font-size:19px;font-weight:800;color:var(--text);letter-spacing:-.3px}
 .metric-value-lg{font-size:26px}
@@ -155,16 +159,13 @@ body{font-family:'Plus Jakarta Sans',-apple-system,BlinkMacSystemFont,'Segoe UI'
 .metric-card.m-danger .metric-value{color:var(--danger)}
 .metric-card.m-success{background:linear-gradient(160deg,var(--success-bg),var(--surface2))}
 .metric-card.m-success .metric-value{color:var(--success)}
-/* Aksen garis warna-warni di puncak kartu metrik + variasi warna ikon
-   berbeda tiap kartu (cyan/violet/pink/emas) — gaya dashboard neon. */
-.metric-card{border-top:3px solid transparent}
-.grid-4 .metric-card:nth-of-type(4n+1){border-top-color:var(--c-cyan)}
-.grid-4 .metric-card:nth-of-type(4n+2){border-top-color:var(--c-violet)}
-.grid-4 .metric-card:nth-of-type(4n+3){border-top-color:var(--c-pink)}
-.grid-4 .metric-card:nth-of-type(4n+4){border-top-color:var(--c-gold)}
-.grid-4 .metric-card.m-accent:nth-of-type(4n+1) .metric-icon{color:var(--c-cyan)}
-.grid-4 .metric-card.m-accent:nth-of-type(4n+2) .metric-icon{color:var(--c-violet)}
-.grid-4 .metric-card.m-accent:nth-of-type(4n+3) .metric-icon{color:var(--c-pink)}
+/* Garis aksen di puncak kartu metrik — satu warna biru konsisten (bukan
+   pelangi bergantian), senada gaya monokrom-biru dashboard referensi. */
+.metric-card{border-top:3px solid var(--accent);opacity:1}
+.metric-card.m-warning{border-top-color:var(--warning)}
+.metric-card.m-danger{border-top-color:var(--danger)}
+.metric-card.m-success{border-top-color:var(--success)}
+.metric-card .metric-icon{color:var(--accent)}
 
 /* Varian "hero" — dipakai untuk metrik laba/profit yang ingin ditonjolkan
    (mis. "Estimasi Laba Bersih"), PERSIS sama dengan kartu hero di Laporan
@@ -257,7 +258,7 @@ tr:hover td{background:var(--surface2)}
 .sumrow .label{color:var(--text2);font-weight:500}
 
 /* ===== Modal ===== */
-.modal-overlay{display:none;position:fixed;inset:0;background:rgba(15,30,24,.55);z-index:999;align-items:center;justify-content:center;padding:16px;backdrop-filter:blur(2px)}
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(8,12,20,.6);z-index:999;align-items:center;justify-content:center;padding:16px;backdrop-filter:blur(2px)}
 .modal-overlay.open{display:flex}
 .modal{background:var(--surface);border-radius:26px;padding:26px;width:520px;max-width:100%;border:1px solid var(--border);max-height:90vh;overflow-y:auto;box-shadow:var(--shadow)}
 .modal h3{font-size:17px;font-weight:800;margin-bottom:18px;display:flex;align-items:center;gap:8px;color:var(--text)}
@@ -292,7 +293,7 @@ tr:hover td{background:var(--surface2)}
 .margin-bar{display:flex;align-items:center;gap:6px}
 .margin-track{width:56px;height:6px;background:var(--surface2);border-radius:6px;overflow:hidden;flex-shrink:0}
 .margin-fill{height:100%;border-radius:6px}
-.info-box{background:var(--accent-light);border:1px solid rgba(124,92,255,.25);border-radius:14px;padding:13px 15px;font-size:12px;color:var(--accent-dark);margin-bottom:16px;line-height:1.6}
+.info-box{background:var(--accent-light);border:1px solid rgba(59,130,246,.25);border-radius:14px;padding:13px 15px;font-size:12px;color:var(--accent-dark);margin-bottom:16px;line-height:1.6}
 [data-theme="dark"] .info-box{color:var(--accent)}
 .hpp-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px}
 .hpp-item{background:var(--surface2);border-radius:14px;padding:12px 14px}
@@ -312,6 +313,11 @@ tr:hover td{background:var(--surface2)}
 /* ===== Chart ===== */
 .chart-box{position:relative}
 
+/* ===== Dashboard hero header (mirip "My Dashboard" pada referensi) ===== */
+.dash-hero{display:flex;align-items:flex-end;justify-content:space-between;gap:14px;margin-bottom:18px;flex-wrap:wrap}
+.dash-hero-title{font-size:22px;font-weight:800;color:var(--text);letter-spacing:-.4px}
+.dash-hero-sub{font-size:12.5px;color:var(--text3);margin-top:4px;max-width:520px}
+
 /* ===== Search bar row ===== */
 .filter-row{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;align-items:center}
 
@@ -324,10 +330,8 @@ tr:hover td{background:var(--surface2)}
 .action-cell{display:flex;gap:4px;align-items:center}
 
 @media(max-width:900px){
-  .sidebar{width:64px;left:8px;top:8px;bottom:8px;border-radius:22px}
+  .sidebar{width:64px}
   .sidebar-logo h1 em,.sidebar-logo small,.nav-item span,.nav-section{display:none}
-  .main{margin-left:88px}
-  .topbar{margin:8px 12px 0}
   .grid-4{grid-template-columns:repeat(2,1fr)}
   .grid-2,.grid-3{grid-template-columns:1fr}
   .nav-item{justify-content:center;padding:11px}
@@ -382,10 +386,10 @@ a:focus-visible,button:focus-visible,.btn:focus-visible,.nav-item:focus-visible,
 /* Panel kiri: branding gradient hijau tua -> mint */
 .auth-panel-left{
   flex:1.1;position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center;
-  background:linear-gradient(135deg,#1a1240 0%,#4527a0 40%,#8b3fd6 70%,#e0479a 100%);
+  background:linear-gradient(135deg,#0a1120 0%,#0f2454 40%,#1d4ed8 70%,#38bdf8 100%);
   padding:48px;color:#fff;
 }
-[data-theme="dark"] .auth-panel-left{background:linear-gradient(135deg,#0a0a1f 0%,#241a5c 40%,#5b21b6 70%,#9d2669 100%)}
+[data-theme="dark"] .auth-panel-left{background:linear-gradient(135deg,#070a12 0%,#101d3a 40%,#1d4ed8 70%,#22d3ee 100%)}
 .auth-brand-glow{
   position:absolute;width:520px;height:520px;border-radius:50%;
   background:radial-gradient(circle,rgba(246,185,59,.20) 0%,transparent 70%);
@@ -432,9 +436,9 @@ a:focus-visible,button:focus-visible,.btn:focus-visible,.nav-item:focus-visible,
   width:100%;padding:13px 16px;border-radius:14px;border:none;
   background:linear-gradient(135deg,var(--accent),var(--accent-dark));color:#fff;font-size:14px;font-weight:700;
   cursor:pointer;font-family:inherit;margin-top:6px;transition:transform .12s,box-shadow .12s;
-  box-shadow:0 6px 18px -4px rgba(124,92,255,.45);
+  box-shadow:0 6px 18px -4px rgba(59,130,246,.45);
 }
-.auth-btn-primary:hover{transform:translateY(-1px);box-shadow:0 8px 22px -4px rgba(124,92,255,.6)}
+.auth-btn-primary:hover{transform:translateY(-1px);box-shadow:0 8px 22px -4px rgba(59,130,246,.6)}
 .auth-btn-primary:active{transform:translateY(0)}
 .auth-btn-primary:disabled{opacity:.6;cursor:not-allowed;transform:none}
 .auth-switch-text{text-align:center;margin-top:18px;font-size:12.5px;color:var(--text3)}
@@ -512,7 +516,7 @@ a:focus-visible,button:focus-visible,.btn:focus-visible,.nav-item:focus-visible,
 .fin-glow-card{position:relative;isolation:isolate}
 .fin-glow-card::before{
   content:'';position:absolute;inset:-2px;border-radius:inherit;z-index:-2;
-  background:linear-gradient(120deg,#7f5af0,#2cb1bc,#e63986,#7f5af0);
+  background:linear-gradient(120deg,#3b82f6,#22d3ee,#3b82f6);
   background-size:300% 300%;animation:finGlowShift 10s ease infinite;
 }
 .fin-glow-card::after{
@@ -529,7 +533,10 @@ a:focus-visible,button:focus-visible,.btn:focus-visible,.nav-item:focus-visible,
 [data-theme="dark"] .fin-metric::after{background:radial-gradient(120px 80px at 100% 0%,rgba(255,255,255,.08),transparent 70%)}
 .fin-metric:hover{transform:translateY(-2px);box-shadow:var(--shadow-sm)}
 .fin-metric:hover::after{opacity:1}
-.fin-metric-icon{width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:19px;margin-bottom:12px;background:var(--surface)}
+.fin-metric-icon{width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:19px;margin-bottom:12px;background:var(--accent-light)}
+.fin-metric.fm-warning .fin-metric-icon{background:var(--warning-bg)}
+.fin-metric.fm-danger .fin-metric-icon{background:var(--danger-bg)}
+.fin-metric.fm-success .fin-metric-icon{background:var(--success-bg)}
 .fin-metric-label{font-size:12.5px;color:var(--text3);font-weight:700;text-transform:uppercase;letter-spacing:.03em;margin-bottom:8px}
 .fin-metric-value{font-size:25px;font-weight:800;color:var(--text);letter-spacing:-.4px}
 .fin-metric-value-lg{font-size:30px}
@@ -545,17 +552,12 @@ a:focus-visible,button:focus-visible,.btn:focus-visible,.nav-item:focus-visible,
 .fin-metric.fm-success{background:linear-gradient(160deg,var(--success-bg),var(--surface2))}
 .fin-metric.fm-success .fin-metric-value{color:var(--success)}
 .fin-metric.fm-success .fin-metric-label{color:var(--success)!important}
-/* Garis aksen warna-warni di puncak tiap kartu metrik keuangan, mengikuti
-   urutan kartu (Omzet→cyan, HPP→pink, Opex→violet, Margin→emas,
-   Laba→teal, Pesanan→cyan) — gaya neon multi-warna seperti dashboard
-   referensi, tanpa mengubah makna semantik warna nilai di dalamnya. */
-.fin-metric{border-top:3px solid transparent}
-.fin-metric-grid .fin-metric:nth-of-type(6n+1){border-top-color:var(--c-cyan)}
-.fin-metric-grid .fin-metric:nth-of-type(6n+2){border-top-color:var(--c-pink)}
-.fin-metric-grid .fin-metric:nth-of-type(6n+3){border-top-color:var(--c-violet)}
-.fin-metric-grid .fin-metric:nth-of-type(6n+4){border-top-color:var(--c-gold)}
-.fin-metric-grid .fin-metric:nth-of-type(6n+5){border-top-color:var(--c-teal)}
-.fin-metric-grid .fin-metric:nth-of-type(6n+6){border-top-color:var(--c-cyan)}
+/* Garis aksen di puncak kartu metrik keuangan — satu warna biru konsisten,
+   mengikuti gaya monokrom-biru dashboard referensi (bukan pelangi lagi). */
+.fin-metric{border-top:3px solid var(--accent)}
+.fin-metric.fm-warning{border-top-color:var(--warning)}
+.fin-metric.fm-danger{border-top-color:var(--danger)}
+.fin-metric.fm-success{border-top-color:var(--success)}
 @media(max-width:980px){
   .fin-metric-grid{grid-template-columns:repeat(2,1fr)}
 }
