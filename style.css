@@ -312,6 +312,33 @@ tr:hover td{background:var(--surface2)}
 .dash-hero-title{font-size:22px;font-weight:800;color:var(--text);letter-spacing:-.4px}
 .dash-hero-sub{font-size:12.5px;color:var(--text3);margin-top:4px;max-width:520px}
 
+/* ===== Mini sparkline di kartu metrik (gaya kartu "Revenue"/"Customers"
+   pada referensi) — canvas digambar manual lewat drawSparkline() di app.js,
+   tanpa dependensi Chart.js supaya ringan. ===== */
+.fin-metric-top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:2px}
+.fin-spark{flex-shrink:0;opacity:.95}
+
+/* ===== Radial progress ring (gaya "Lead Conversion" pada referensi) —
+   dibuat murni CSS pakai conic-gradient, persentase & warna diatur lewat
+   custom property --pct & --ring-color dari JS (lihat renderDashboard()). */
+.fin-ring{
+  --pct:0;--ring-color:var(--accent);
+  width:44px;height:44px;border-radius:50%;flex-shrink:0;
+  background:conic-gradient(var(--ring-color) calc(var(--pct)*1%),var(--surface2) 0);
+  display:flex;align-items:center;justify-content:center;
+  transition:background .5s;
+}
+.fin-ring::after{content:'';width:30px;height:30px;border-radius:50%;background:var(--surface2)}
+
+/* ===== Equalizer bar chart (gaya kartu "NPS" pada referensi) — dipakai
+   untuk Top 5 Produk Terlaris, tiap bar tinggi & warnanya proporsional
+   terhadap qty terjual, dirender dari JS (lihat renderDashboard()). ===== */
+.equalizer{display:flex;align-items:flex-end;gap:12px;height:172px;padding:10px 4px 0}
+.eq-bar-col{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%}
+.eq-bar-value{font-size:10.5px;font-weight:700;color:var(--text2);margin-bottom:6px;white-space:nowrap}
+.eq-bar{width:100%;max-width:36px;border-radius:10px 10px 5px 5px;transition:height .5s ease}
+.eq-bar-label{font-size:10px;color:var(--text3);margin-top:8px;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+
 /* ===== Search bar row ===== */
 .filter-row{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;align-items:center}
 
@@ -374,76 +401,107 @@ a:focus-visible,button:focus-visible,.btn:focus-visible,.nav-item:focus-visible,
 .mp-manage-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
 .mp-manage-actions{display:flex;gap:4px}
 
-/* ===== AUTH SCREEN (Login / Sign Up / Pending) — Modern Split Layout, tema mint/hijau ===== */
-.auth-screen{position:fixed;inset:0;z-index:1000;display:flex;background:var(--bg)}
-
-/* Panel kiri: branding gradient hijau tua -> mint */
-.auth-panel-left{
-  flex:1.1;position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center;
-  background:linear-gradient(135deg,#0a1120 0%,#0f2454 40%,#1d4ed8 70%,#38bdf8 100%);
-  padding:48px;color:#fff;
+/* =========================================================================
+   AUTH SCREEN (Login / Sign Up / Pending) — "Nexus Access" HUD sci-fi
+   style: satu kartu gelap melayang di tengah, bracket sudut, avatar bulat
+   bercahaya, tag status ala terminal ("SYSTEM ONLINE"), input & tombol
+   bertema biru-cyan neon. Selalu gelap (tidak ikut toggle tema terang)
+   karena memang gaya HUD ini secara desain hanya masuk akal versi gelap.
+   ========================================================================= */
+.auth-screen{
+  position:fixed;inset:0;z-index:1000;display:flex;align-items:center;justify-content:center;
+  padding:24px;overflow:auto;
+  background:
+    radial-gradient(700px 420px at 15% 10%,rgba(56,189,248,.10),transparent 60%),
+    radial-gradient(600px 460px at 90% 90%,rgba(59,130,246,.10),transparent 60%),
+    repeating-linear-gradient(0deg,rgba(255,255,255,.025) 0px,rgba(255,255,255,.025) 1px,transparent 1px,transparent 26px),
+    #05070d;
 }
-[data-theme="dark"] .auth-panel-left{background:linear-gradient(135deg,#070a12 0%,#101d3a 40%,#1d4ed8 70%,#22d3ee 100%)}
-.auth-brand-glow{
-  position:absolute;width:520px;height:520px;border-radius:50%;
-  background:radial-gradient(circle,rgba(246,185,59,.20) 0%,transparent 70%);
-  top:-120px;right:-120px;pointer-events:none;
+.auth-card{
+  position:relative;width:100%;max-width:430px;
+  background:linear-gradient(180deg,#0b1220,#0d1526 70%,#0b1425);
+  border:1px solid rgba(56,189,248,.3);border-radius:20px;
+  padding:40px 32px 28px;color:#e6f1fb;
+  box-shadow:0 0 0 1px rgba(56,189,248,.06),0 40px 80px -24px rgba(0,0,0,.75),0 0 70px -12px rgba(34,211,238,.16);
+  animation:authFadeIn .4s ease;
 }
-.auth-brand-glow::after{
-  content:'';position:absolute;width:380px;height:380px;border-radius:50%;
-  background:radial-gradient(circle,rgba(255,255,255,.12) 0%,transparent 70%);
-  bottom:-260px;left:-180px;
-}
-.auth-brand-content{position:relative;z-index:2;max-width:440px}
-.auth-brand-logo{display:flex;align-items:center;gap:10px;font-size:19px;font-weight:800;margin-bottom:48px;color:#fff}
-.auth-brand-logo em{font-style:normal;opacity:.85;color:var(--accent2)}
-.auth-brand-logo img{max-width:30px;max-height:30px;border-radius:9px}
-.auth-brand-title{font-size:30px;font-weight:800;line-height:1.3;margin-bottom:16px;letter-spacing:-.5px}
-.auth-brand-sub{font-size:14px;line-height:1.7;color:rgba(255,255,255,.85);margin-bottom:40px}
-.auth-brand-stats{display:flex;gap:14px;flex-wrap:wrap}
-.auth-stat{display:flex;align-items:center;gap:10px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.18);border-radius:16px;padding:11px 14px;backdrop-filter:blur(6px)}
-.auth-stat-icon{font-size:18px}
-.auth-stat-label{font-size:12px;font-weight:800}
-.auth-stat-desc{font-size:11px;color:rgba(255,255,255,.7)}
-
-/* Panel kanan: form */
-.auth-panel-right{flex:1;display:flex;align-items:center;justify-content:center;position:relative;padding:32px;background:var(--bg)}
-.auth-theme-toggle{position:absolute;top:24px;right:28px;width:38px;height:38px;border-radius:50%;border:1px solid var(--border2);background:var(--surface);color:var(--text2);cursor:pointer;font-size:15px;display:flex;align-items:center;justify-content:center;transition:all .15s}
-.auth-theme-toggle:hover{background:var(--surface2);color:var(--text)}
-.auth-form-box{width:100%;max-width:380px;animation:authFadeIn .4s ease}
 @keyframes authFadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
-.auth-form-header{margin-bottom:28px}
-.auth-form-header h1{font-size:24px;font-weight:800;color:var(--text);margin-bottom:6px;letter-spacing:-.3px}
-.auth-form-header p{font-size:13px;color:var(--text3)}
+
+/* Bracket dekoratif di 4 sudut kartu, ciri khas UI HUD sci-fi */
+.auth-corner{position:absolute;width:16px;height:16px;border-color:rgba(56,189,248,.75);pointer-events:none}
+.auth-corner.ctl{top:10px;left:10px;border-top:2px solid;border-left:2px solid;border-top-left-radius:4px}
+.auth-corner.ctr{top:10px;right:10px;border-top:2px solid;border-right:2px solid;border-top-right-radius:4px}
+.auth-corner.cbl{bottom:10px;left:10px;border-bottom:2px solid;border-left:2px solid;border-bottom-left-radius:4px}
+.auth-corner.cbr{bottom:10px;right:10px;border-bottom:2px solid;border-right:2px solid;border-bottom-right-radius:4px}
+/* Titik kecil di ujung tiap bracket, aksen khas HUD ala "Nexus Access" */
+.auth-corner::after{content:'';position:absolute;width:3px;height:3px;border-radius:50%;background:#38bdf8;box-shadow:0 0 5px 1px rgba(56,189,248,.9)}
+.auth-corner.ctl::after{top:-2px;left:-2px}
+.auth-corner.ctr::after{top:-2px;right:-2px}
+.auth-corner.cbl::after{bottom:-2px;left:-2px}
+.auth-corner.cbr::after{bottom:-2px;right:-2px}
+
+/* Tag kecil ala terminal di pojok kartu */
+.auth-tag{position:absolute;font-size:9.5px;letter-spacing:1.6px;text-transform:uppercase;font-weight:700;color:#4a5c7a;display:flex;align-items:center;gap:6px;white-space:nowrap}
+.tag-tl{top:18px;left:30px;color:#67e0f7}
+.tag-tr{top:18px;right:32px}
+.tag-bl{bottom:14px;left:30px}
+.tag-br{bottom:14px;right:30px}
+.auth-dot{width:6px;height:6px;border-radius:50%;background:#22d3ee;box-shadow:0 0 8px 2px rgba(34,211,238,.8);display:inline-block;animation:authBlink 1.6s ease-in-out infinite}
+@keyframes authBlink{0%,100%{opacity:1}50%{opacity:.3}}
+
+.auth-theme-toggle{position:absolute;top:12px;right:12px;width:26px;height:26px;border-radius:50%;border:1px solid rgba(56,189,248,.3);background:rgba(255,255,255,.04);color:#8ba3c7;cursor:pointer;font-size:12px;display:flex;align-items:center;justify-content:center;transition:all .15s;z-index:2}
+.auth-theme-toggle:hover{background:rgba(255,255,255,.09);color:#eaf6ff}
+
+.auth-avatar{width:62px;height:62px;border-radius:50%;background:linear-gradient(135deg,#0ea5e9,#3b82f6);display:flex;align-items:center;justify-content:center;margin:6px auto 22px;color:#fff;box-shadow:0 0 0 6px rgba(56,189,248,.08),0 0 34px -6px rgba(56,189,248,.7);overflow:hidden}
+.auth-avatar img{width:100%;height:100%;object-fit:cover;border-radius:50%}
+
+.auth-form-header{text-align:center;margin-bottom:24px}
+.auth-form-header h1{font-size:19px;font-weight:800;letter-spacing:1px;color:#eaf6ff;margin-bottom:6px}
+.auth-form-header h1 em{font-style:normal;color:#38bdf8}
+.auth-form-header p{font-size:12px;color:#7d8bab}
+
 .auth-field{margin-bottom:16px}
-.auth-field label{display:block;font-size:12.5px;font-weight:700;color:var(--text2);margin-bottom:6px}
+.auth-field label{display:block;font-size:10px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:#5b9bd5;margin-bottom:7px}
 .auth-input-wrap{position:relative;display:flex;align-items:center}
-.auth-input-icon{position:absolute;left:13px;color:var(--text3);pointer-events:none}
+.auth-input-icon{position:absolute;left:13px;color:#4a90c2;pointer-events:none}
 .auth-input{
-  width:100%;padding:11px 14px 11px 38px;border-radius:14px;border:1.5px solid var(--border2);
-  background:var(--surface2);color:var(--text);font-size:13.5px;font-family:inherit;outline:none;
-  transition:border-color .15s,box-shadow .15s,background .15s;
+  width:100%;padding:11px 14px 11px 38px;border-radius:10px;border:1px solid rgba(56,189,248,.22);
+  background:rgba(6,12,24,.65);color:#eaf6ff;font-size:13.5px;font-family:inherit;outline:none;
+  transition:border-color .15s,box-shadow .15s;
 }
-.auth-input:focus{border-color:var(--accent);background:var(--surface);box-shadow:0 0 0 4px var(--accent-light)}
-.auth-input::placeholder{color:var(--text3)}
+.auth-input-wrap.has-hint .auth-input{padding-right:68px}
+/* Label kecil ala HUD di ujung kanan input (mis. "ID-2107" / "AES-256"),
+   murni dekoratif — meniru gaya kartu "Nexus Access" pada referensi. */
+.auth-input-hint{position:absolute;right:13px;font-size:9.5px;letter-spacing:1px;color:#3d5170;font-weight:800;pointer-events:none;text-transform:uppercase;font-family:'Courier New',monospace}
+.auth-input:focus{border-color:#38bdf8;box-shadow:0 0 0 3px rgba(56,189,248,.18)}
+.auth-input::placeholder{color:#3d5170}
+
+.auth-row-between{display:flex;align-items:center;justify-content:space-between;margin:0 0 20px;font-size:11.5px;flex-wrap:wrap;gap:8px}
+.auth-remember{display:flex;align-items:center;gap:7px;color:#8ba3c7;cursor:default;user-select:none}
+.auth-remember input{accent-color:#38bdf8;width:13px;height:13px}
+.auth-row-between a{color:#5b9bd5;text-decoration:none;font-weight:700}
+.auth-row-between a:hover{text-decoration:underline;color:#7dd3fc}
+
 .auth-btn-primary{
-  width:100%;padding:13px 16px;border-radius:14px;border:none;
-  background:linear-gradient(135deg,var(--accent),var(--accent-dark));color:#fff;font-size:14px;font-weight:700;
-  cursor:pointer;font-family:inherit;margin-top:6px;transition:transform .12s,box-shadow .12s;
-  box-shadow:0 6px 18px -4px rgba(59,130,246,.45);
+  width:100%;padding:13px 16px;border-radius:12px;border:none;
+  background:linear-gradient(90deg,#0ea5e9,#3b82f6);color:#fff;font-size:13px;font-weight:800;
+  letter-spacing:1.4px;text-transform:uppercase;cursor:pointer;font-family:inherit;transition:transform .12s,box-shadow .12s;
+  box-shadow:0 10px 26px -8px rgba(56,189,248,.55);display:flex;align-items:center;justify-content:center;
 }
-.auth-btn-primary:hover{transform:translateY(-1px);box-shadow:0 8px 22px -4px rgba(59,130,246,.6)}
+.auth-btn-primary:hover{transform:translateY(-1px);box-shadow:0 12px 30px -6px rgba(56,189,248,.7)}
 .auth-btn-primary:active{transform:translateY(0)}
-.auth-btn-primary:disabled{opacity:.6;cursor:not-allowed;transform:none}
-.auth-switch-text{text-align:center;margin-top:18px;font-size:12.5px;color:var(--text3)}
-.auth-switch-text a{color:var(--accent);font-weight:700;text-decoration:none}
+.auth-btn-primary:disabled{opacity:.55;cursor:not-allowed;transform:none}
+.auth-switch-text{text-align:center;margin-top:18px;font-size:12px;color:#5b6a86}
+.auth-switch-text a{color:#38bdf8;font-weight:700;text-decoration:none}
 .auth-switch-text a:hover{text-decoration:underline}
-.auth-pending-icon{font-size:46px;margin-bottom:10px;animation:authPulse 2s ease-in-out infinite}
+.auth-pending-icon{font-size:44px;margin-bottom:10px;animation:authPulse 2s ease-in-out infinite}
 @keyframes authPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.08)}}
 
-@media(max-width:860px){
-  .auth-panel-left{display:none}
-  .auth-panel-right{padding:24px}
+@media(max-width:480px){
+  .auth-card{padding:34px 22px 24px}
+  .tag-tl,.tag-tr{top:14px}
+  .tag-tl{left:26px}.tag-tr{right:28px}
+  .tag-bl,.tag-br{font-size:8.5px}
 }
 
 /* ===== PERIODE PICKER (dropdown periode custom bergaya date-range picker) ===== */
