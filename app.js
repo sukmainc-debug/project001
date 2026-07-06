@@ -737,7 +737,8 @@ async function muatHistory(){
     const{data,error}=await query;
     _logLoading=false;
     if(error){
-      tbody.innerHTML=`<tr><td colspan="5" style="text-align:center;padding:32px;color:var(--danger)">Gagal memuat histori: ${error.message}${error.message.includes('does not exist')?' — jalankan ulang SETUP-LENGKAP-OMNISELLER.sql (Bagian 7) di Supabase.':''}</td></tr>`;
+      const belumAda=/does not exist|could not find the table/i.test(error.message);
+      tbody.innerHTML=`<tr><td colspan="5" style="text-align:center;padding:32px;color:var(--danger)">Gagal memuat histori: ${error.message}${belumAda?' — tabel log_aktivitas belum ada. Jalankan ulang SETUP-LENGKAP-OMNISELLER.sql (Bagian 7) di Supabase SQL Editor, lalu refresh halaman ini.':''}</td></tr>`;
       const moreBtn=document.getElementById('btn-history-more');if(moreBtn)moreBtn.style.display='none';
       return;
     }
