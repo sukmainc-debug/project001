@@ -537,6 +537,7 @@ async function proceedAfterAuth(user){
     applyNavVisibility();        // pangkas sidebar sesuai ROLE (berlaku di index.html juga)
     applyRolePermissions();      // terapkan permission tombol SETELAH render selesai
     updateAdminInfo();
+    catatAktivitas('Login','Sistem','Berhasil masuk ke aplikasi');
   }catch(e){
     console.warn('Gagal cek role:',e);
     loginAlert('Gagal memuat data akses akun: '+e.message);
@@ -602,6 +603,7 @@ async function adminLogin(){
 }
 async function adminLogout(){
   if(!confirm('Keluar dari dashboard?'))return;
+  await catatAktivitas('Logout','Sistem','Keluar dari aplikasi');
   try{await supabaseClient.auth.signOut()}catch(e){}
   _currentAdminUser=null;_currentAdminRole=null;_currentAdminNama='';_currentSection=null;
   history.replaceState(null,'','#/');
@@ -693,6 +695,76 @@ function applyRolePermissions(){
 // kind='jual' -> pakai izin khusus pesanan (termasuk role Kasir); selain itu pakai izin staff/owner biasa.
 function actionCellRW(html,kind){return(kind==='jual'?canWriteOrders():canWrite())?html:''}
 
+// ===== HISTORY AKTIVITAS =====
+// Mencatat SEMUA aktivitas penting (tambah/edit/hapus/login/dst) ke tabel
+// `log_aktivitas` di Supabase, supaya Owner/Staff bisa lihat siapa melakukan
+// apa & kapan lewat menu History (sidebar > Data > History). Dibuat
+// fire-and-forget (tidak di-await pemanggilnya) supaya tidak memperlambat
+// aksi utama, dan dibungkus try/catch supaya kegagalan mencatat log TIDAK
+// pernah menggagalkan aksi utama (simpan data tetap jalan walau log gagal).
+async function catatAktivitas(aksi,entitas,keterangan){
+  try{
+    if(typeof supabaseClient==='undefined'||!supabaseClient)return;
+    const nama=_currentAdminNama||(_currentAdminUser?_currentAdminUser.email:'')||'Sistem';
+    await supabaseClient.from(TBL_LOG_AKTIVITAS).insert({
+      waktu:new Date().toISOString(),aktor:_currentAdminUser?_currentAdminUser.id:null,
+      aktor_nama:nama,aksi,entitas,keterangan:keterangan||''
+    });
+    // Kalau menu History sedang terbuka, muat ulang biar aktivitas baru
+    // langsung kelihatan tanpa harus pindah menu lalu balik lagi.
+    if(_currentSection==='history')filterHistory();
+  }catch(e){console.warn('Gagal mencatat histori aktivitas:',e)}
+}
+const AKSI_BADGE={Tambah:'badge-green',Edit:'badge-blue',Hapus:'badge-red',Restock:'badge-green',Import:'badge-blue',Restore:'badge-yellow',Reset:'badge-red',Rekonsiliasi:'badge-yellow',Login:'badge-blue',Logout:'badge-gray'};
+let _logRows=[],_logOffset=0,_logHasMore=true,_logLoading=false;
+const LOG_PAGE_SIZE=50;
+// Dipanggil setiap kali menu History dibuka, atau filter/pencarian diubah.
+function filterHistory(){_logOffset=0;_logRows=[];_logHasMore=true;muatHistory()}
+async function muatHistory(){
+  const tbody=document.getElementById('tbl-history');
+  if(!tbody)return;
+  if(typeof supabaseClient==='undefined'||!supabaseClient)return;
+  if(_logLoading)return;_logLoading=true;
+  if(_logOffset===0)tbody.innerHTML='<tr><td colspan="5" style="text-align:center;padding:32px;color:var(--text3)">Memuat histori...</td></tr>';
+  const q=(document.getElementById('q-history')?.value||'').trim();
+  const aksi=document.getElementById('f-aksi-history')?.value||'';
+  const entitas=document.getElementById('f-entitas-history')?.value||'';
+  try{
+    let query=supabaseClient.from(TBL_LOG_AKTIVITAS).select('*').order('waktu',{ascending:false}).range(_logOffset,_logOffset+LOG_PAGE_SIZE-1);
+    if(aksi)query=query.eq('aksi',aksi);
+    if(entitas)query=query.eq('entitas',entitas);
+    if(q)query=query.or(`keterangan.ilike.%${q}%,aktor_nama.ilike.%${q}%`);
+    const{data,error}=await query;
+    _logLoading=false;
+    if(error){
+      tbody.innerHTML=`<tr><td colspan="5" style="text-align:center;padding:32px;color:var(--danger)">Gagal memuat histori: ${error.message}${error.message.includes('does not exist')?' — jalankan ulang SETUP-LENGKAP-OMNISELLER.sql (Bagian 7) di Supabase.':''}</td></tr>`;
+      const moreBtn=document.getElementById('btn-history-more');if(moreBtn)moreBtn.style.display='none';
+      return;
+    }
+    const rows=data||[];
+    _logRows=_logRows.concat(rows);
+    _logHasMore=rows.length===LOG_PAGE_SIZE;
+    _logOffset+=rows.length;
+    renderHistoryTable();
+  }catch(e){_logLoading=false;tbody.innerHTML=`<tr><td colspan="5" style="text-align:center;padding:32px;color:var(--danger)">Gagal memuat histori: ${e.message}</td></tr>`}
+}
+function muatHistoryLebihBanyak(){muatHistory()}
+function renderHistoryTable(){
+  const el=document.getElementById('tbl-history');if(!el)return;
+  el.innerHTML=_logRows.length?_logRows.map(r=>`
+    <tr>
+      <td style="color:var(--text2);white-space:nowrap">${new Date(r.waktu).toLocaleString('id-ID')}</td>
+      <td><span class="badge ${AKSI_BADGE[r.aksi]||'badge-gray'}">${esc(r.aksi)}</span></td>
+      <td>${esc(r.entitas)}</td>
+      <td style="color:var(--text2)">${esc(r.keterangan||'–')}</td>
+      <td style="color:var(--text2);white-space:nowrap">👤 ${esc(r.aktor_nama||'–')}</td>
+    </tr>`).join(''):'<tr><td colspan="5" style="text-align:center;padding:32px;color:var(--text3)">Belum ada aktivitas tercatat di periode/filter ini</td></tr>';
+  const moreBtn=document.getElementById('btn-history-more');
+  if(moreBtn)moreBtn.style.display=_logHasMore?'':'none';
+  const countEl=document.getElementById('history-count');
+  if(countEl)countEl.textContent=_logRows.length+(_logHasMore?'+':'')+' aktivitas';
+}
+
 // ===== MANAJEMEN USER & HAK AKSES (khusus Owner) =====
 async function renderUserList(){
   const el=document.getElementById('user-list-manage');
@@ -735,6 +807,7 @@ async function ubahRoleUser(userId,role){
       alert('⚠️ Perubahan TIDAK tersimpan ke database (kemungkinan ditolak oleh keamanan database/RLS).\n\nKemungkinan penyebab:\n- Akun Anda belum berstatus Owner di tabel admin_users\n- SETUP-ROLES.sql belum sepenuhnya dijalankan / ada langkah yang gagal\n\nCoba jalankan ulang FIX-MANAJEMEN-USER.sql, lalu logout & login kembali.');
       renderUserList();return;
     }
+    catatAktivitas('Edit','User & Akses',`Role "${data[0].nama||data[0].email}" diubah menjadi ${role}`);
     renderUserList();
   }catch(e){alert('Gagal mengubah role: '+e.message)}
 }
@@ -747,6 +820,7 @@ async function hapusAksesUser(userId,nama){
       alert('⚠️ Penghapusan TIDAK tersimpan ke database (kemungkinan ditolak oleh keamanan database/RLS).\n\nCoba jalankan ulang FIX-MANAJEMEN-USER.sql, lalu logout & login kembali.');
       renderUserList();return;
     }
+    catatAktivitas('Hapus','User & Akses',`Akses "${nama}" dicabut`);
     renderUserList();
   }catch(e){alert('Gagal mencabut akses: '+e.message)}
 }
@@ -776,7 +850,7 @@ if(typeof supabaseClient!=='undefined'&&supabaseClient){
 }
 
 // ===== SECTIONS =====
-const PAGE_TITLES={dashboard:'Dashboard','dashboard-kasir':'Dashboard Kasir',penjualan:'Laporan Penjualan',stok:'Stok & Gudang',produk:'Produk & Kategori',laba:'Laba & Biaya Admin per Produk',inventory:'Inventory — Pembelian & Penggajian',laporan:'Laporan Keuangan',import:'Import Data',pengaturan:'Pengaturan'};
+const PAGE_TITLES={dashboard:'Dashboard','dashboard-kasir':'Dashboard Kasir',penjualan:'Laporan Penjualan',stok:'Stok & Gudang',produk:'Produk & Kategori',laba:'Laba & Biaya Admin per Produk',inventory:'Inventory — Pembelian & Penggajian',laporan:'Laporan Keuangan',import:'Import Data',history:'History Aktivitas',pengaturan:'Pengaturan'};
 const MENU_IDS=Object.keys(PAGE_TITLES);
 let _currentSection=null;
 
@@ -840,6 +914,7 @@ function showSection(id,el){
   if(id==='laba'){renderLabaSection();renderBiayaInputs();renderHppMode();}
   if(id==='inventory'){filterPembelian();filterPenggajian();renderInventorySummary();}
   if(id==='pengaturan'){updateInfoPengaturan();if(canManageSettings())renderUserList();}
+  if(id==='history')filterHistory();
   applyRolePermissions(); // selalu re-apply setiap ganti section
 }
 
@@ -1439,6 +1514,7 @@ function rekonsiliasiStok(){
     }
   });
   saveDB(['stok']);filteredStok=[...DB.stok];renderStokTable();renderDashboard();
+  if(jumlahDiperbaiki)catatAktivitas('Rekonsiliasi','Stok Produk',`${jumlahDiperbaiki} SKU disesuaikan`);
   const res=document.getElementById('rekonsiliasi-result');
   if(res)res.innerHTML=jumlahDiperbaiki?`<div class="alert alert-success">✅ Selesai. <strong>${jumlahDiperbaiki} SKU</strong> disesuaikan agar "terjual" cocok dengan Data Penjualan.</div>`:`<div class="alert alert-success">✅ Semua SKU sudah sinkron, tidak ada yang perlu diperbaiki.</div>`;
 }
@@ -1561,8 +1637,10 @@ function simpanStok(){
     hpp:parseFloat(document.getElementById('s-hpp').value)||0};
   if(!r.prod){alert('Nama produk wajib diisi');return}
   r.updatedAt=new Date().toISOString();
-  if(idx!==''&&idx>=0){DB.stok[parseInt(idx)]=Object.assign({},DB.stok[parseInt(idx)],r)}
+  const isEdit=idx!==''&&idx>=0;
+  if(isEdit){DB.stok[parseInt(idx)]=Object.assign({},DB.stok[parseInt(idx)],r)}
   else{r.created_at=new Date().toISOString();DB.stok.unshift(r)}
+  catatAktivitas(isEdit?'Edit':'Tambah','Stok Produk',`${r.prod}${r.varian?' - '+r.varian:''} (SKU ${r.sku})`);
   saveDB(['stok']);filteredStok=[...DB.stok];renderStokTable();renderDashboard();closeModal('modal-tambah-stok');
 }
 function bukaRestock(idx){
@@ -1575,7 +1653,10 @@ function bukaRestock(idx){
 function simpanRestock(){
   if(!canWrite()){alert("Anda tidak punya izin untuk restock.");return}
   if(_restockIdx<0)return;const tambah=parseInt(document.getElementById('rs-tambah').value)||0;
-  DB.stok[_restockIdx].stok+=tambah;DB.stok[_restockIdx].updatedAt=new Date().toISOString();saveDB(['stok']);filteredStok=[...DB.stok];renderStokTable();renderDashboard();closeModal('modal-restock');_restockIdx=-1;
+  const s=DB.stok[_restockIdx];
+  s.stok+=tambah;s.updatedAt=new Date().toISOString();
+  catatAktivitas('Restock','Stok Produk',`${s.prod}${s.varian?' - '+s.varian:''} +${tambah} pcs (SKU ${s.sku})`);
+  saveDB(['stok']);filteredStok=[...DB.stok];renderStokTable();renderDashboard();closeModal('modal-restock');_restockIdx=-1;
 }
 
 // ===== HAPUS =====
@@ -1595,16 +1676,18 @@ function hapusData(type,idx){
   if(type==='jual'){
     const order=DB.penjualan[idx];
     terapkanEfekStok(order,+1); // kembalikan stok yang sebelumnya terpakai pesanan ini
+    catatAktivitas('Hapus','Pesanan',`No. ${order.no} — ${order.mp} — ${fmtRp(order.total)}`);
     DB.penjualan.splice(idx,1);filteredStok=[...DB.stok];filterJual();renderStokTable();affected=['penjualan','stok'];
   }
-  else if(type==='stok'){DB.stok.splice(idx,1);filteredStok=[...DB.stok];renderStokTable();affected=['stok']}
-  else if(type==='kat'){DB.kategori.splice(idx,1);renderKatList();populateKatDropdowns();affected=['kategori']}
+  else if(type==='stok'){const s=DB.stok[idx];catatAktivitas('Hapus','Stok Produk',`${s.prod}${s.varian?' - '+s.varian:''} (SKU ${s.sku})`);DB.stok.splice(idx,1);filteredStok=[...DB.stok];renderStokTable();affected=['stok']}
+  else if(type==='kat'){const k=DB.kategori[idx];catatAktivitas('Hapus','Kategori',k.nama);DB.kategori.splice(idx,1);renderKatList();populateKatDropdowns();affected=['kategori']}
   else if(type==='mp'){
     if(DB.marketplace.length<=1){alert('Minimal harus ada 1 marketplace.');return}
+    const m=DB.marketplace[idx];catatAktivitas('Hapus','Marketplace',m.nama);
     DB.marketplace.splice(idx,1);refreshMpGlobals();populateMpDropdowns();renderMpList();affected=['marketplace'];
   }
-  else if(type==='pembelian'){DB.pembelian.splice(idx,1);filterPembelian();affected=['pembelian']}
-  else if(type==='penggajian'){DB.penggajian.splice(idx,1);filterPenggajian();affected=['penggajian']}
+  else if(type==='pembelian'){const p=DB.pembelian[idx];catatAktivitas('Hapus','Pembelian',`${p.item} — ${fmtRp(p.total)}`);DB.pembelian.splice(idx,1);filterPembelian();affected=['pembelian']}
+  else if(type==='penggajian'){const p=DB.penggajian[idx];catatAktivitas('Hapus','Penggajian',`${p.namaKaryawan} — ${fmtRp(p.nominal)}`);DB.penggajian.splice(idx,1);filterPenggajian();affected=['penggajian']}
   saveDB(affected);renderDashboard();
 }
 
@@ -1710,8 +1793,8 @@ function simpanPembelian(){
   const r={tanggal:fmtTgl(new Date(tglVal)),_date:new Date(tglVal).toISOString(),supplier,item,qty,
     satuan:document.getElementById('pb-satuan').value.trim()||'pcs',hargaSatuan:harga,total:qty*harga,
     catatan:document.getElementById('pb-catatan').value.trim()};
-  if(idx!==''&&idx>=0){r.kode=DB.pembelian[parseInt(idx)].kode;DB.pembelian[parseInt(idx)]=r}
-  else{r.kode=buatKodeInventory('PB');DB.pembelian.unshift(r)}
+  if(idx!==''&&idx>=0){r.kode=DB.pembelian[parseInt(idx)].kode;DB.pembelian[parseInt(idx)]=r;catatAktivitas('Edit','Pembelian',`${r.item} — ${fmtRp(r.total)}`)}
+  else{r.kode=buatKodeInventory('PB');DB.pembelian.unshift(r);catatAktivitas('Tambah','Pembelian',`${r.item} — ${fmtRp(r.total)}`)}
   saveDB(['pembelian']);filterPembelian();renderDashboard();closeModal('modal-tambah-pembelian');
 }
 
@@ -1773,8 +1856,8 @@ function simpanPenggajian(){
   const r={tanggal:fmtTgl(new Date(tglVal)),_date:new Date(tglVal).toISOString(),namaKaryawan:nama,
     jabatan:document.getElementById('pg-jabatan').value.trim(),periode:document.getElementById('pg-periode').value.trim(),
     nominal:parseFloat(document.getElementById('pg-nominal').value)||0,catatan:document.getElementById('pg-catatan').value.trim()};
-  if(idx!==''&&idx>=0){r.kode=DB.penggajian[parseInt(idx)].kode;DB.penggajian[parseInt(idx)]=r}
-  else{r.kode=buatKodeInventory('PG');DB.penggajian.unshift(r)}
+  if(idx!==''&&idx>=0){r.kode=DB.penggajian[parseInt(idx)].kode;DB.penggajian[parseInt(idx)]=r;catatAktivitas('Edit','Penggajian',`${r.namaKaryawan} — ${fmtRp(r.nominal)}`)}
+  else{r.kode=buatKodeInventory('PG');DB.penggajian.unshift(r);catatAktivitas('Tambah','Penggajian',`${r.namaKaryawan} — ${fmtRp(r.nominal)}`)}
   saveDB(['penggajian']);filterPenggajian();renderDashboard();closeModal('modal-tambah-penggajian');
 }
 function exportPembelianCSV(){const h=csvRow(['Tanggal','Supplier','Item','Qty','Satuan','Harga Satuan','Total','Catatan'])+'\n';dlFile(h+DB.pembelian.map(r=>csvRow([r.tanggal,r.supplier,r.item,r.qty,r.satuan,r.hargaSatuan,r.total,r.catatan||''])).join('\n'),'pembelian_'+today()+'.csv','text/csv')}
@@ -1845,7 +1928,9 @@ function simpanKategori(){
   if(!canManageSettings()){alert("Hanya Owner yang bisa mengelola kategori.");return}
   const nama=document.getElementById('kat-nama').value.trim();if(!nama){alert('Nama kategori wajib diisi');return}
   const idx=document.getElementById('edit-kat-idx').value;
-  if(idx!==''&&idx>=0)DB.kategori[parseInt(idx)]={nama,color:_selectedKatColor};else DB.kategori.push({nama,color:_selectedKatColor});
+  const isEdit=idx!==''&&idx>=0;
+  if(isEdit)DB.kategori[parseInt(idx)]={nama,color:_selectedKatColor};else DB.kategori.push({nama,color:_selectedKatColor});
+  catatAktivitas(isEdit?'Edit':'Tambah','Kategori',nama);
   saveDB(['kategori']);populateKatDropdowns();renderKatList();renderKatPerf();closeModal('modal-tambah-kat');
 }
 
@@ -1899,6 +1984,7 @@ function simpanMarketplace(){
     if(DB.biaya&&DB.biaya.mp_fee&&DB.biaya.mp_fee[nama]===undefined)DB.biaya.mp_fee[nama]=3;
   }
   refreshMpGlobals();saveDB(['marketplace','biaya']);populateMpDropdowns();renderMpList();renderDashboard();closeModal('modal-tambah-mp');
+  catatAktivitas(oldNama?'Edit':'Tambah','Marketplace',nama);
 }
 function populateMpDropdowns(){
   const ids=['f-mp','f-mp-jual','f-mp-laba'];
@@ -2138,9 +2224,9 @@ function simpanBiaya(){
   const b=DB.biaya;
   b.hpp_mode=document.getElementById('hpp-mode').value||'pct';
   if(b.hpp_mode==='pct'){const v=parseFloat(document.getElementById('hpp-pct-val').value);b.hpp_pct=isNaN(v)?45:v}
-  saveDB(['biaya','marketplace','stok']);alert('✅ Pengaturan HPP disimpan! Laporan laba diperbarui.');renderLabaRingkasan();
+  saveDB(['biaya','marketplace','stok']);catatAktivitas('Edit','Biaya & HPP','Mode: '+(b.hpp_mode==='pct'?'Persentase '+b.hpp_pct+'%':'Per Produk'));alert('✅ Pengaturan HPP disimpan! Laporan laba diperbarui.');renderLabaRingkasan();
 }
-function resetBiaya(){if(!canManageSettings()){alert("Hanya Owner yang bisa reset biaya.");return}if(confirm('Reset pengaturan HPP ke default?')){DB.biaya=JSON.parse(JSON.stringify(DEFAULT_BIAYA));saveDB(['biaya','marketplace','stok']);renderBiayaInputs();renderHppMode();alert('Pengaturan HPP direset.')}}
+function resetBiaya(){if(!canManageSettings()){alert("Hanya Owner yang bisa reset biaya.");return}if(confirm('Reset pengaturan HPP ke default?')){DB.biaya=JSON.parse(JSON.stringify(DEFAULT_BIAYA));saveDB(['biaya','marketplace','stok']);catatAktivitas('Reset','Biaya & HPP','Dikembalikan ke default');renderBiayaInputs();renderHppMode();alert('Pengaturan HPP direset.')}}
 
 // ===== LAPORAN =====
 function renderLaporan(){
@@ -2712,6 +2798,7 @@ function processCSV(file,type){
       }
     }
     saveDB(['penjualan','stok','marketplace']);filteredStok=[...DB.stok];populateMpDropdowns();filterJual();renderStokTable();renderDashboard();
+    catatAktivitas('Import',type==='jual'?'Pesanan':'Stok Produk',`Import CSV: ${imported} baris berhasil${errors?`, ${errors} gagal`:''}`);
     const res=document.getElementById(type==='jual'?'import-result':'import-stok-result');
     res.innerHTML=`<div class="alert alert-success">✅ Berhasil import <strong>${imported} baris</strong>${errors?` (${errors} baris gagal)`:''}</div>`;
   };
@@ -2804,10 +2891,11 @@ function migrasiPenjualanLama(list){
     return{...r,items:r.items||[]};
   });
 }
-function restoreData(e){const reader=new FileReader();reader.onload=function(ev){try{DB=JSON.parse(ev.target.result);if(!DB.marketplace||!DB.marketplace.length)DB.marketplace=JSON.parse(JSON.stringify(DEFAULT_MP));DB.penjualan=migrasiPenjualanLama(DB.penjualan);if(!DB.pembelian)DB.pembelian=[];if(!DB.penggajian)DB.penggajian=[];refreshMpGlobals();saveDB();filteredStok=[...DB.stok];filteredPembelian=[...DB.pembelian];filteredPenggajian=[...DB.penggajian];applyPengaturan();populateKatDropdowns();populateMpDropdowns();ppSetMode('pp-dash','semua');renderDashboard();filterJual();renderStokTable();alert('Data dipulihkan! '+DB.penjualan.length+' pesanan, '+DB.stok.length+' varian.')}catch(err){alert('File backup tidak valid: '+err.message)}};reader.readAsText(e.target.files[0])}
+function restoreData(e){const reader=new FileReader();reader.onload=function(ev){try{DB=JSON.parse(ev.target.result);if(!DB.marketplace||!DB.marketplace.length)DB.marketplace=JSON.parse(JSON.stringify(DEFAULT_MP));DB.penjualan=migrasiPenjualanLama(DB.penjualan);if(!DB.pembelian)DB.pembelian=[];if(!DB.penggajian)DB.penggajian=[];refreshMpGlobals();saveDB();filteredStok=[...DB.stok];filteredPembelian=[...DB.pembelian];filteredPenggajian=[...DB.penggajian];applyPengaturan();populateKatDropdowns();populateMpDropdowns();ppSetMode('pp-dash','semua');renderDashboard();filterJual();renderStokTable();catatAktivitas('Restore','Data',`Pulihkan backup: ${DB.penjualan.length} pesanan, ${DB.stok.length} varian`);alert('Data dipulihkan! '+DB.penjualan.length+' pesanan, '+DB.stok.length+' varian.')}catch(err){alert('File backup tidak valid: '+err.message)}};reader.readAsText(e.target.files[0])}
 function resetData(){if(!canManageSettings()){alert('Hanya Owner yang bisa reset data.');return}if(confirm('Hapus SEMUA data penjualan & stok? Tindakan ini tidak bisa dibatalkan.')){
   DB.penjualan=[];DB.stok=[];DB.kategori=[...DEFAULT_KAT];DB.marketplace=JSON.parse(JSON.stringify(DEFAULT_MP));DB.biaya=JSON.parse(JSON.stringify(DEFAULT_BIAYA));DB.pembelian=[];DB.penggajian=[];
   refreshMpGlobals();saveDB();filteredStok=[...DB.stok];filteredPembelian=[];filteredPenggajian=[];populateKatDropdowns();populateMpDropdowns();applyPengaturan();ppSetMode('pp-dash','semua');renderDashboard();filterJual();renderStokTable();
+  catatAktivitas('Reset','Data','Semua data penjualan & stok dikosongkan');
   alert('Semua data berhasil dikosongkan. Silakan mulai input data Anda sendiri.');
 }}
 
@@ -2816,7 +2904,7 @@ function simpanPengaturan(){
   if(!canManageSettings()){alert("Hanya Owner yang bisa mengubah pengaturan toko.");return}
   DB.pengaturan.nama=document.getElementById('set-nama').value;DB.pengaturan.pemilik=document.getElementById('set-pemilik').value;
   DB.pengaturan.hp=document.getElementById('set-hp').value;const vBatas=parseInt(document.getElementById('set-batas-stok').value);DB.pengaturan.batasStok=isNaN(vBatas)?10:vBatas;
-  saveDB(['pengaturan']);applyPengaturan();renderDashboard();alert('Pengaturan tersimpan!');
+  saveDB(['pengaturan']);applyPengaturan();renderDashboard();catatAktivitas('Edit','Pengaturan Toko',`${DB.pengaturan.nama} — batas stok ${DB.pengaturan.batasStok}`);alert('Pengaturan tersimpan!');
 }
 function applyPengaturan(){
   document.getElementById('set-nama').value=DB.pengaturan.nama||'';document.getElementById('set-pemilik').value=DB.pengaturan.pemilik||'';
