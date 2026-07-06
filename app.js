@@ -596,10 +596,10 @@ async function adminLogin(){
   loginAlert('');
   try{
     const{data,error}=await supabaseClient.auth.signInWithPassword({email,password});
-    if(error){loginAlert('Login gagal: '+error.message);btn.disabled=false;btn.textContent='Masuk';return}
+    if(error){loginAlert('Login gagal: '+error.message);btn.disabled=false;btn.textContent='🔐 Otentikasi';return}
     await proceedAfterAuth(data.user);
   }catch(e){loginAlert('Login gagal: '+e.message)}
-  btn.disabled=false;btn.textContent='Masuk';
+  btn.disabled=false;btn.textContent='🔐 Otentikasi';
 }
 async function adminLogout(){
   if(!confirm('Keluar dari dashboard?'))return;
@@ -612,6 +612,29 @@ async function adminLogout(){
   loginAlert('');
   showLoginScreen();
 }
+// "Lupa kode akses?" — kirim email reset password lewat Supabase Auth.
+async function lupaKodeAkses(){
+  if(typeof supabaseClient==='undefined'||!supabaseClient){loginAlert('Koneksi ke Supabase gagal dimuat.');return}
+  const email=(document.getElementById('login-email').value||'').trim();
+  if(!email){loginAlert('Isi dulu ID Pengguna (email) Anda di atas, baru klik "Lupa kode akses?" lagi.');return}
+  try{
+    const{error}=await supabaseClient.auth.resetPasswordForEmail(email);
+    if(error){loginAlert('Gagal mengirim email reset: '+error.message);return}
+    loginAlert('✅ Link atur ulang kode akses sudah dikirim ke '+email+'. Cek inbox/folder spam Anda.','success');
+  }catch(e){loginAlert('Gagal mengirim email reset: '+e.message)}
+}
+// Isi tag tanggal kecil di pojok kartu login (gaya "OMNISELLER CORE · tanggal")
+(function isiTanggalAuth(){
+  const teks=new Date().toLocaleDateString('id-ID',{day:'2-digit',month:'2-digit',year:'numeric'});
+  document.addEventListener('DOMContentLoaded',()=>{
+    const a=document.getElementById('auth-date-tag');if(a)a.textContent=teks;
+    const b=document.getElementById('auth-date-tag2');if(b)b.textContent=teks;
+    // Kode "ID-XXXX" kecil di sisi kanan kolom ID Pengguna — murni dekoratif
+    // (gaya HUD ala kartu referensi "Nexus Access"), dibuat acak per sesi.
+    const idTag=document.getElementById('auth-id-tag');
+    if(idTag)idTag.textContent='ID-'+String(Math.floor(1000+Math.random()*9000));
+  });
+})();
 function updateAdminInfo(){
   const emailEl=document.getElementById('info-admin-email');
   const sinceEl=document.getElementById('info-admin-since');
