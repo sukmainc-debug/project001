@@ -402,104 +402,109 @@ a:focus-visible,button:focus-visible,.btn:focus-visible,.nav-item:focus-visible,
 .mp-manage-actions{display:flex;gap:4px}
 
 /* =========================================================================
-   AUTH SCREEN (Login / Sign Up / Pending) — "Nexus Access" HUD sci-fi
-   style: satu kartu gelap melayang di tengah, bracket sudut, avatar bulat
-   bercahaya, tag status ala terminal ("SYSTEM ONLINE"), input & tombol
-   bertema biru-cyan neon. Selalu gelap (tidak ikut toggle tema terang)
-   karena memang gaya HUD ini secara desain hanya masuk akal versi gelap.
+   AUTH SCREEN (Login / Sign Up / Pending) — "Aurora Glass" style: kartu
+   kaca (glassmorphism) melayang di atas latar biru gelap berpendar lembut,
+   senada dengan tema Aurora Dashboard (--accent biru #3b82f6 + --accent2
+   cyan #0ea5e9, font Plus Jakarta Sans). Selalu gelap (tidak ikut toggle
+   tema terang) karena kartu kaca ini didesain khusus di atas latar gelap.
    ========================================================================= */
 .auth-screen{
   position:fixed;inset:0;z-index:1000;display:flex;align-items:center;justify-content:center;
   padding:24px;overflow:auto;
   background:
-    radial-gradient(700px 420px at 15% 10%,rgba(56,189,248,.10),transparent 60%),
-    radial-gradient(600px 460px at 90% 90%,rgba(59,130,246,.10),transparent 60%),
-    repeating-linear-gradient(0deg,rgba(255,255,255,.025) 0px,rgba(255,255,255,.025) 1px,transparent 1px,transparent 26px),
-    #05070d;
+    radial-gradient(560px 480px at 12% 8%,rgba(59,130,246,.32),transparent 60%),
+    radial-gradient(620px 520px at 90% 88%,rgba(14,165,233,.28),transparent 60%),
+    radial-gradient(900px 700px at 50% 50%,#161b2c,transparent 75%),
+    linear-gradient(160deg,#0a0e1a,#0d1220 55%,#0a0e18);
 }
 .auth-card{
-  position:relative;width:100%;max-width:430px;
-  background:linear-gradient(180deg,#0b1220,#0d1526 70%,#0b1425);
-  border:1px solid rgba(56,189,248,.3);border-radius:20px;
-  padding:40px 32px 28px;color:#e6f1fb;
-  box-shadow:0 0 0 1px rgba(56,189,248,.06),0 40px 80px -24px rgba(0,0,0,.75),0 0 70px -12px rgba(34,211,238,.16);
-  animation:authFadeIn .4s ease;
+  position:relative;width:100%;max-width:400px;
+  background:linear-gradient(165deg,rgba(59,130,246,.16),rgba(13,20,38,.55) 45%,rgba(9,13,24,.6));
+  backdrop-filter:blur(22px);-webkit-backdrop-filter:blur(22px);
+  border:1px solid rgba(147,197,253,.28);border-radius:28px;
+  padding:44px 34px 32px;color:#eaf2ff;
+  box-shadow:0 0 0 1px rgba(255,255,255,.03) inset,0 30px 70px -20px rgba(0,0,0,.65),0 0 60px -18px rgba(59,130,246,.5);
+  animation:authFadeIn .45s ease;
+  overflow:hidden;
 }
-@keyframes authFadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+/* Sorot cahaya halus di dua sudut kartu, memberi kesan kaca berpendar
+   seperti pada referensi (glow biru muncul dari sisi kartu). */
+.auth-card::before{
+  content:'';position:absolute;top:-40%;left:-30%;width:70%;height:70%;
+  background:radial-gradient(circle,rgba(96,165,250,.35),transparent 70%);
+  pointer-events:none;filter:blur(10px);
+}
+.auth-card::after{
+  content:'';position:absolute;bottom:-35%;right:-25%;width:65%;height:65%;
+  background:radial-gradient(circle,rgba(34,211,238,.28),transparent 70%);
+  pointer-events:none;filter:blur(10px);
+}
+@keyframes authFadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
 
-/* Bracket dekoratif di 4 sudut kartu, ciri khas UI HUD sci-fi */
-.auth-corner{position:absolute;width:16px;height:16px;border-color:rgba(56,189,248,.75);pointer-events:none}
-.auth-corner.ctl{top:10px;left:10px;border-top:2px solid;border-left:2px solid;border-top-left-radius:4px}
-.auth-corner.ctr{top:10px;right:10px;border-top:2px solid;border-right:2px solid;border-top-right-radius:4px}
-.auth-corner.cbl{bottom:10px;left:10px;border-bottom:2px solid;border-left:2px solid;border-bottom-left-radius:4px}
-.auth-corner.cbr{bottom:10px;right:10px;border-bottom:2px solid;border-right:2px solid;border-bottom-right-radius:4px}
-/* Titik kecil di ujung tiap bracket, aksen khas HUD ala "Nexus Access" */
-.auth-corner::after{content:'';position:absolute;width:3px;height:3px;border-radius:50%;background:#38bdf8;box-shadow:0 0 5px 1px rgba(56,189,248,.9)}
-.auth-corner.ctl::after{top:-2px;left:-2px}
-.auth-corner.ctr::after{top:-2px;right:-2px}
-.auth-corner.cbl::after{bottom:-2px;left:-2px}
-.auth-corner.cbr::after{bottom:-2px;right:-2px}
+/* Dekorasi HUD lama (bracket sudut & tag terminal) sudah tidak dipakai
+   pada tampilan kaca baru ini — disembunyikan agar markup lama yang masih
+   merender elemen ini di HTML tidak lagi tampil di layar. */
+.auth-corner,.auth-tag{display:none}
 
-/* Tag kecil ala terminal di pojok kartu */
-.auth-tag{position:absolute;font-size:9.5px;letter-spacing:1.6px;text-transform:uppercase;font-weight:700;color:#4a5c7a;display:flex;align-items:center;gap:6px;white-space:nowrap}
-.tag-tl{top:18px;left:30px;color:#67e0f7}
-.tag-tr{top:18px;right:32px}
-.tag-bl{bottom:14px;left:30px}
-.tag-br{bottom:14px;right:30px}
-.auth-dot{width:6px;height:6px;border-radius:50%;background:#22d3ee;box-shadow:0 0 8px 2px rgba(34,211,238,.8);display:inline-block;animation:authBlink 1.6s ease-in-out infinite}
-@keyframes authBlink{0%,100%{opacity:1}50%{opacity:.3}}
+.auth-theme-toggle{position:absolute;top:16px;right:16px;width:30px;height:30px;border-radius:50%;border:1px solid rgba(147,197,253,.3);background:rgba(255,255,255,.06);color:#cfe0ff;cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center;transition:all .15s;z-index:2}
+.auth-theme-toggle:hover{background:rgba(255,255,255,.12);color:#fff}
 
-.auth-theme-toggle{position:absolute;top:12px;right:12px;width:26px;height:26px;border-radius:50%;border:1px solid rgba(56,189,248,.3);background:rgba(255,255,255,.04);color:#8ba3c7;cursor:pointer;font-size:12px;display:flex;align-items:center;justify-content:center;transition:all .15s;z-index:2}
-.auth-theme-toggle:hover{background:rgba(255,255,255,.09);color:#eaf6ff}
-
-.auth-avatar{width:62px;height:62px;border-radius:50%;background:linear-gradient(135deg,#0ea5e9,#3b82f6);display:flex;align-items:center;justify-content:center;margin:6px auto 22px;color:#fff;box-shadow:0 0 0 6px rgba(56,189,248,.08),0 0 34px -6px rgba(56,189,248,.7);overflow:hidden}
+/* Avatar bulat dengan cincin tembus-pandang, meniru lingkaran ikon kamera
+   pada referensi foto — di sini memuat logo/ikon toko. */
+.auth-avatar{
+  position:relative;z-index:1;width:84px;height:84px;border-radius:50%;
+  background:rgba(255,255,255,.06);
+  border:1.5px solid rgba(147,197,253,.55);
+  display:flex;align-items:center;justify-content:center;margin:2px auto 26px;color:#bfdbfe;
+  box-shadow:0 0 0 8px rgba(59,130,246,.08),0 0 40px -8px rgba(59,130,246,.55);
+  overflow:hidden;
+}
 .auth-avatar img{width:100%;height:100%;object-fit:cover;border-radius:50%}
+.auth-avatar svg{width:30px;height:30px}
 
-.auth-form-header{text-align:center;margin-bottom:24px}
-.auth-form-header h1{font-size:19px;font-weight:800;letter-spacing:1px;color:#eaf6ff;margin-bottom:6px}
-.auth-form-header h1 em{font-style:normal;color:#38bdf8}
-.auth-form-header p{font-size:12px;color:#7d8bab}
+.auth-form-header{position:relative;z-index:1;text-align:center;margin-bottom:26px}
+.auth-form-header h1{font-size:20px;font-weight:800;letter-spacing:.2px;color:#fff;margin-bottom:6px}
+.auth-form-header h1 em{font-style:normal;color:#7dd3fc}
+.auth-form-header p{font-size:12.5px;color:#a9bbdb}
 
-.auth-field{margin-bottom:16px}
-.auth-field label{display:block;font-size:10px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:#5b9bd5;margin-bottom:7px}
+.auth-field{position:relative;z-index:1;margin-bottom:14px}
+.auth-field label{display:block;font-size:10px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:#8fb3e8;margin-bottom:7px}
 .auth-input-wrap{position:relative;display:flex;align-items:center}
 .auth-input-icon{position:absolute;left:13px;color:#4a90c2;pointer-events:none}
 .auth-input{
-  width:100%;padding:11px 14px 11px 38px;border-radius:10px;border:1px solid rgba(56,189,248,.22);
-  background:rgba(6,12,24,.65);color:#eaf6ff;font-size:13.5px;font-family:inherit;outline:none;
-  transition:border-color .15s,box-shadow .15s;
+  width:100%;padding:13px 14px 13px 40px;border-radius:14px;border:1px solid rgba(147,197,253,.18);
+  background:rgba(8,14,28,.55);color:#eaf2ff;font-size:13.5px;font-family:inherit;outline:none;
+  transition:border-color .15s,box-shadow .15s,background .15s;
 }
 .auth-input-wrap.has-hint .auth-input{padding-right:68px}
-/* Label kecil ala HUD di ujung kanan input (mis. "ID-2107" / "AES-256"),
-   murni dekoratif — meniru gaya kartu "Nexus Access" pada referensi. */
+/* Label kecil dekoratif di ujung kanan input (mis. "AES-256") */
 .auth-input-hint{position:absolute;right:13px;font-size:9.5px;letter-spacing:1px;color:#3d5170;font-weight:800;pointer-events:none;text-transform:uppercase;font-family:'Courier New',monospace}
-.auth-input:focus{border-color:#38bdf8;box-shadow:0 0 0 3px rgba(56,189,248,.18)}
-.auth-input::placeholder{color:#3d5170}
+.auth-input:focus{border-color:#7dd3fc;background:rgba(8,14,28,.75);box-shadow:0 0 0 3px rgba(56,189,248,.18)}
+.auth-input::placeholder{color:#6b84ad}
 
-.auth-row-between{display:flex;align-items:center;justify-content:space-between;margin:0 0 20px;font-size:11.5px;flex-wrap:wrap;gap:8px}
-.auth-remember{display:flex;align-items:center;gap:7px;color:#8ba3c7;cursor:default;user-select:none}
-.auth-remember input{accent-color:#38bdf8;width:13px;height:13px}
-.auth-row-between a{color:#5b9bd5;text-decoration:none;font-weight:700}
-.auth-row-between a:hover{text-decoration:underline;color:#7dd3fc}
+.auth-row-between{position:relative;z-index:1;display:flex;align-items:center;justify-content:space-between;margin:0 0 22px;font-size:11.5px;flex-wrap:wrap;gap:8px}
+.auth-remember{display:flex;align-items:center;gap:7px;color:#a9bbdb;cursor:default;user-select:none}
+.auth-remember input{accent-color:#38bdf8;width:14px;height:14px;border-radius:4px}
+.auth-row-between a{color:#7dd3fc;text-decoration:none;font-weight:600;font-style:italic}
+.auth-row-between a:hover{text-decoration:underline;color:#bae6fd}
 
 .auth-btn-primary{
-  width:100%;padding:13px 16px;border-radius:12px;border:none;
-  background:linear-gradient(90deg,#0ea5e9,#3b82f6);color:#fff;font-size:13px;font-weight:800;
-  letter-spacing:1.4px;text-transform:uppercase;cursor:pointer;font-family:inherit;transition:transform .12s,box-shadow .12s;
-  box-shadow:0 10px 26px -8px rgba(56,189,248,.55);display:flex;align-items:center;justify-content:center;
+  position:relative;z-index:1;width:100%;padding:14px 16px;border-radius:16px;border:none;
+  background:linear-gradient(135deg,var(--accent,#3b82f6),var(--accent-dark,#1d4ed8));color:#fff;font-size:13.5px;font-weight:700;
+  letter-spacing:1.2px;text-transform:uppercase;cursor:pointer;font-family:inherit;transition:transform .12s,box-shadow .12s;
+  box-shadow:0 14px 30px -10px rgba(59,130,246,.65);display:flex;align-items:center;justify-content:center;
 }
-.auth-btn-primary:hover{transform:translateY(-1px);box-shadow:0 12px 30px -6px rgba(56,189,248,.7)}
+.auth-btn-primary:hover{transform:translateY(-1px);box-shadow:0 16px 34px -8px rgba(59,130,246,.8)}
 .auth-btn-primary:active{transform:translateY(0)}
 .auth-btn-primary:disabled{opacity:.55;cursor:not-allowed;transform:none}
-.auth-switch-text{text-align:center;margin-top:18px;font-size:12px;color:#5b6a86}
-.auth-switch-text a{color:#38bdf8;font-weight:700;text-decoration:none}
+.auth-switch-text{position:relative;z-index:1;text-align:center;margin-top:20px;font-size:12px;color:#8296bb}
+.auth-switch-text a{color:#7dd3fc;font-weight:700;text-decoration:none}
 .auth-switch-text a:hover{text-decoration:underline}
 .auth-pending-icon{font-size:44px;margin-bottom:10px;animation:authPulse 2s ease-in-out infinite}
 @keyframes authPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.08)}}
 
 @media(max-width:480px){
-  .auth-card{padding:34px 22px 24px}
-  .tag-tl,.tag-tr{top:14px}
+  .auth-card{padding:36px 24px 26px}
   .tag-tl{left:26px}.tag-tr{right:28px}
   .tag-bl,.tag-br{font-size:8.5px}
 }
@@ -651,7 +656,29 @@ a:focus-visible,button:focus-visible,.btn:focus-visible,.nav-item:focus-visible,
    ========================================================= */
 @media print{
   @page{margin:14mm}
+  /* PERBAIKAN: saat mode gelap aktif (default aplikasi), --text/--text2/--text3
+     berisi warna TERANG (dibuat untuk latar gelap). Sebelumnya saat dicetak
+     hanya `body{background:#fff}` yang dipaksa putih, tapi variabel warna teks
+     TIDAK ikut direset — hasilnya teks kartu "Total Omzet", "Biaya Admin
+     Marketplace", "Ongkir & Biaya Lain-lain", "HPP Estimasi", "Pengeluaran
+     Operasional", "Estimasi Laba Bersih", dll (yang semuanya pakai var(--text)/
+     var(--text2)/var(--text3)) jadi nyaris putih-di-atas-putih dan tidak
+     kelihatan di kertas. Reset semua variabel tema ke versi terang di sini,
+     apapun tema yang sedang aktif di layar, supaya seluruh teks laporan
+     kembali gelap & terbaca saat dicetak.
+  */
+  :root,[data-theme="dark"]{
+    --bg:#ffffff;--surface:#ffffff;--surface2:#f3f5fa;
+    --border:rgba(15,23,42,.14);--border2:rgba(15,23,42,.2);
+    --text:#0f1523;--text2:#57607a;--text3:#8993ad;
+    --accent:#3b82f6;--accent-dark:#1d4ed8;--accent-light:#e6efff;
+    --accent2:#0ea5e9;--accent2-light:#e1f4fd;
+    --success:#0ea472;--success-bg:#e3f8f0;
+    --warning:#d97706;--warning-bg:#fdf1de;
+    --danger:#dc2626;--danger-bg:#fbe8e8;
+  }
   body{background:#fff!important}
+  .fin-metric,.fin-metric-icon,.fin-print-header{-webkit-print-color-adjust:exact;print-color-adjust:exact;color-adjust:exact}
   .sidebar,.topbar,.no-print,#login-screen,.modal-overlay,.toast-container{display:none!important}
   .main{margin-left:0!important}
   .page-content{padding:0!important;max-width:100%!important}
