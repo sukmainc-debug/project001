@@ -715,7 +715,44 @@ async function catatAktivitas(aksi,entitas,keterangan){
     if(_currentSection==='history')filterHistory();
   }catch(e){console.warn('Gagal mencatat histori aktivitas:',e)}
 }
-const AKSI_BADGE={Tambah:'badge-green',Edit:'badge-blue',Hapus:'badge-red',Restock:'badge-green',Import:'badge-blue',Restore:'badge-yellow',Reset:'badge-red',Rekonsiliasi:'badge-yellow',Login:'badge-blue',Logout:'badge-gray'};
+const AKSI_BADGE={Tambah:'badge-green',Edit:'badge-blue',Hapus:'badge-red',Restock:'badge-green',Import:'badge-blue',Restore:'badge-yellow',Reset:'badge-red',Rekonsiliasi:'badge-yellow',Login:'badge-blue',Logout:'badge-gray',Error:'badge-red',Peringatan:'badge-yellow'};
+
+// ===== TANGKAP CONSOLE ERROR/WARNING JS OTOMATIS =====
+// Supaya kalau ada fitur update/hapus yang diam-diam gagal karena error
+// JavaScript (yang biasanya cuma kelihatan di DevTools browser orang yang
+// mengalaminya), riwayatnya tetap tercatat ke History Aktivitas (aksi
+// "Error"/"Peringatan", data "Console JS") — jadi bisa ditelusuri belakangan
+// tanpa perlu minta orang itu buka Console sendiri.
+// Dibungkus rapat dengan penjagaan anti-loop & anti-spam supaya TIDAK
+// pernah membuat aplikasi lambat/nge-lag ataupun rekursi tak berujung
+// (catatAktivitas sendiri juga memanggil console.warn saat gagal).
+(function(){
+  const _origError=console.error.bind(console);
+  const _origWarn=console.warn.bind(console);
+  let _sedangMencatatConsole=false;
+  const _pesanTerbaruConsole=new Map();
+  function ringkasArgsConsole(args){
+    try{
+      return args.map(a=>{
+        if(a instanceof Error)return a.message+(a.stack?(' | '+String(a.stack).split('\n').slice(0,3).join(' > ')):'');
+        if(typeof a==='object')return JSON.stringify(a);
+        return String(a);
+      }).join(' ').slice(0,500);
+    }catch(e){return '(pesan tidak bisa dibaca)'}
+  }
+  function catatConsole(aksi,pesan){
+    if(_sedangMencatatConsole||!pesan)return;
+    const kunci=aksi+'|'+pesan;const now=Date.now();
+    if((_pesanTerbaruConsole.get(kunci)||0)>now-8000)return; // dedupe 8 detik, anti-spam
+    _pesanTerbaruConsole.set(kunci,now);
+    _sedangMencatatConsole=true;
+    catatAktivitas(aksi,'Console JS',pesan+' — halaman: '+(location.hash||'/')).finally(()=>{_sedangMencatatConsole=false});
+  }
+  console.error=function(...args){_origError(...args);catatConsole('Error',ringkasArgsConsole(args))};
+  console.warn=function(...args){_origWarn(...args);catatConsole('Peringatan',ringkasArgsConsole(args))};
+  window.addEventListener('error',ev=>catatConsole('Error','Uncaught: '+(ev.message||'')+(ev.filename?(' @ '+ev.filename.split('/').pop()+':'+ev.lineno):'')));
+  window.addEventListener('unhandledrejection',ev=>catatConsole('Error','Unhandled Promise Rejection: '+(ev.reason&&ev.reason.message?ev.reason.message:String(ev.reason))));
+})();
 let _logRows=[],_logOffset=0,_logHasMore=true,_logLoading=false;
 const LOG_PAGE_SIZE=50;
 // Dipanggil setiap kali menu History dibuka, atau filter/pencarian diubah.
@@ -750,6 +787,30 @@ async function muatHistory(){
   }catch(e){_logLoading=false;tbody.innerHTML=`<tr><td colspan="5" style="text-align:center;padding:32px;color:var(--danger)">Gagal memuat histori: ${e.message}</td></tr>`}
 }
 function muatHistoryLebihBanyak(){muatHistory()}
+// Export histori aktivitas (sesuai filter/pencarian yang sedang aktif) ke
+// CSV. Mengambil ULANG dari Supabase (bukan cuma baris yang sudah ke-load
+// di layar) supaya hasil export lengkap, dibatasi 5000 baris terbaru
+// supaya tidak membebani browser/koneksi.
+async function exportHistoryCSV(btn){
+  if(typeof supabaseClient==='undefined'||!supabaseClient){alert('Supabase belum siap.');return}
+  if(btn)btn.disabled=true;
+  try{
+    const q=(document.getElementById('q-history')?.value||'').trim();
+    const aksi=document.getElementById('f-aksi-history')?.value||'';
+    const entitas=document.getElementById('f-entitas-history')?.value||'';
+    let query=supabaseClient.from(TBL_LOG_AKTIVITAS).select('*').order('waktu',{ascending:false}).limit(5000);
+    if(aksi)query=query.eq('aksi',aksi);
+    if(entitas)query=query.eq('entitas',entitas);
+    if(q)query=query.or(`keterangan.ilike.%${q}%,aktor_nama.ilike.%${q}%`);
+    const{data,error}=await query;
+    if(error){alert('Gagal export histori: '+error.message);return}
+    if(!data||!data.length){alert('Tidak ada data histori untuk diexport (sesuai filter saat ini).');return}
+    const h=csvRow(['Waktu','Aktivitas','Data','Keterangan','Oleh'])+'\n';
+    const body=data.map(r=>csvRow([new Date(r.waktu).toLocaleString('id-ID'),r.aksi,r.entitas,r.keterangan||'',r.aktor_nama||''])).join('\n');
+    dlFile(h+body,'history_aktivitas_'+today()+'.csv','text/csv');
+  }catch(e){alert('Gagal export histori: '+e.message)}
+  finally{if(btn)btn.disabled=false}
+}
 function renderHistoryTable(){
   const el=document.getElementById('tbl-history');if(!el)return;
   el.innerHTML=_logRows.length?_logRows.map(r=>`
