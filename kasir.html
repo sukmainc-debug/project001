@@ -714,6 +714,8 @@
           <option value="Reset">Reset</option>
           <option value="Login">Login</option>
           <option value="Logout">Logout</option>
+          <option value="Error">Error (Console JS)</option>
+          <option value="Peringatan">Peringatan (Console JS)</option>
         </select>
         <select class="form-select" id="f-entitas-history" onchange="filterHistory()">
           <option value="">Semua Data</option>
@@ -727,9 +729,11 @@
           <option value="Pengaturan Toko">Pengaturan Toko</option>
           <option value="User & Akses">User & Akses</option>
           <option value="Data">Data</option>
+          <option value="Console JS">Console JS</option>
           <option value="Sistem">Sistem</option>
         </select>
         <button class="btn btn-sm" onclick="filterHistory()">🔄 Muat Ulang</button>
+        <button class="btn btn-sm btn-primary" onclick="exportHistoryCSV(this)">⬇️ Export CSV</button>
       </div>
       <div class="card">
         <div class="table-wrap">
