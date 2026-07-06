@@ -275,7 +275,7 @@ async function syncPenggajian_(){
 // Ambil semua data dari tabel relasional & susun ulang jadi struktur DB di memori
 async function loadFromSupabase(){
   try{
-    const[katRes,mpRes,stokRes,pesananRes,itemRes,biayaRes,hppRes,setRes,pembelianRes,penggajianRes]=await Promise.all([
+    const[katRes,mpRes,stokRes,pesananRes,itemRes,biayaRes,hppRes,setRes,pembelianRes,penggajianRes,usersRes]=await Promise.all([
       supabaseClient.from(TBL_KATEGORI).select('*').order('id'),
       supabaseClient.from(TBL_MARKETPLACE).select('*').order('id'),
       supabaseClient.from(TBL_STOK).select('*').order('id'),
@@ -286,9 +286,17 @@ async function loadFromSupabase(){
       supabaseClient.from(TBL_PENGATURAN).select('*').eq('id',1).maybeSingle(),
       supabaseClient.from(TBL_PEMBELIAN).select('*').order('id'),
       supabaseClient.from(TBL_PENGGAJIAN).select('*').order('id'),
+      supabaseClient.from('admin_users').select('id,nama,email'),
     ]);
     const errs=[katRes,mpRes,stokRes,pesananRes,itemRes,biayaRes,hppRes,setRes,pembelianRes,penggajianRes].map(r=>r.error).filter(Boolean);
     if(errs.length){console.warn('Gagal memuat dari Supabase:',errs[0].message);updateSyncBadge(false,errs[0].message);return null}
+
+    // Peta user_id -> nama (fallback email), dipakai untuk menampilkan siapa
+    // yang PERTAMA kali menginput tiap pesanan (kolom "Diinput oleh" di
+    // Laporan Penjualan). Kalau gagal diambil (mis. tidak ada akses), biarkan
+    // kosong saja — tidak menggagalkan pemuatan data lain.
+    const usersMap={};
+    (usersRes&&usersRes.data||[]).forEach(u=>{usersMap[u.id]=u.nama&&u.nama.trim()?u.nama:u.email});
 
     const kategori=(katRes.data||[]).map(k=>({nama:k.nama,color:k.color}));
     const marketplace=(mpRes.data||[]).map(m=>({nama:m.nama,color:m.color}));
@@ -306,6 +314,7 @@ async function loadFromSupabase(){
       const items=itemsByPesanan[r.id]||[];
       const order={no:r.no_pesanan,tanggal:r.tanggal,_date:r.tgl_iso,mp:r.marketplace,status:r.status,
         biayaAdmin:r.biaya_admin!=null?Number(r.biaya_admin):null,biayaTambahan:r.biaya_tambahan!=null?Number(r.biaya_tambahan):null,
+        dibuatOleh:r.created_by?(usersMap[r.created_by]||null):null,
         items};
       recalcOrderTotal(order);
       return order;
@@ -933,13 +942,26 @@ function renderDashboard(){
   setTxt('m-opex',fmtRp(totalOpex));
   setTxt('m-opex-sub','Pembelian '+fmtRp(totalBeliOpex)+' · Gaji '+fmtRp(totalGajiOpex));
   const marginEl=setTxt('m-margin-val',margin.toFixed(1)+'%');
-  if(marginEl)marginEl.style.color=margin>=20?'var(--success)':margin>=0?'var(--warning)':'var(--danger)';
+  const marginColor=margin>=20?'var(--success)':margin>=0?'var(--warning)':'var(--danger)';
+  if(marginEl)marginEl.style.color=marginColor;
+  const ringEl=document.getElementById('margin-ring');
+  if(ringEl){ringEl.style.setProperty('--pct',Math.max(0,Math.min(100,margin)));ringEl.style.setProperty('--ring-color',marginColor)}
   const labaEl=setTxt('m-laba',fmtRp(totalLaba));
   if(labaEl)labaEl.style.color=totalLaba>=0?'var(--success)':'var(--danger)';
   setTxt('m-laba-sub',totalLaba>=0?'📈 Untung':'📉 Rugi');
   setTxt('m-ord',totalOrd.toLocaleString('id-ID'));
   setTxt('m-ord-sub',panahSub(pctOrd));
   setTxt('nb-stok',kritis);
+
+  // Sparkline mini di kartu Omzet (garis tren) & Total Pesanan (bar tren) —
+  // gaya kartu "Revenue"/"Customers" pada dashboard referensi, digambar
+  // manual di canvas (bukan Chart.js) supaya ringan & tidak perlu legend/axis.
+  const unitSpark=unitOtomatis(start,end);
+  const bucketsSpark=buatBucketLaporan(start,end,unitSpark);
+  const revBuckets=bucketsSpark.map(b=>recent.filter(r=>new Date(r._date)>=b.start&&new Date(r._date)<=b.end).reduce((a,r)=>a+(r.total||0),0));
+  const ordBuckets=bucketsSpark.map(b=>recent.filter(r=>new Date(r._date)>=b.start&&new Date(r._date)<=b.end).length);
+  drawSparkline('spark-omzet',revBuckets,'line','#60a5fa');
+  drawSparkline('spark-ord',ordBuckets,'bar','#60a5fa');
 
   // Alerts
   const habis=DB.stok.filter(s=>s.stok===0);const rendah=DB.stok.filter(s=>s.stok>0&&s.stok<=batas);
@@ -960,18 +982,69 @@ function renderDashboard(){
     <div class="mp-bar-col"><div class="mp-bar-track"><div class="mp-bar-fill" style="width:${Math.round(mpRev[m]/maxRev*100)}%;background:${MP_COLORS[m]}"></div></div></div>
     <div class="mp-rev-col"><div class="mp-rev">${fmtRp(mpRev[m])}</div><div class="mp-orders-txt">${mpOrd[m]} pesanan</div></div></div>`).join('');
 
-  // Top 5 (dihitung per barang di dalam pesanan, bukan per pesanan)
+  // Top 5 (dihitung per barang di dalam pesanan, bukan per pesanan) —
+  // ditampilkan sebagai "equalizer" bar vertikal berwarna-warni, gaya
+  // kartu "NPS" pada dashboard referensi.
   const pm={};flattenPenjualan(recent).forEach(r=>{pm[r.prod]=(pm[r.prod]||0)+r.qty});
   const top5=Object.entries(pm).sort((a,b)=>b[1]-a[1]).slice(0,5);
   const maxQ=top5.length?top5[0][1]:1;
+  const eqColors=['#3b82f6','#22d3ee','#34d399','#fbbf24','#f87171'];
   const top5El=document.getElementById('top5-bars');
-  if(top5El)top5El.innerHTML=top5.map(([n,q])=>`
-    <div class="prog-row"><div class="prog-label">${n}</div>
-    <div class="prog-track"><div class="prog-fill" style="width:${Math.round(q/maxQ*100)}%"></div></div>
-    <div class="prog-val">${q} pcs</div></div>`).join('');
+  if(top5El)top5El.innerHTML=top5.length?top5.map(([n,q],i)=>`
+    <div class="eq-bar-col">
+      <div class="eq-bar-value">${q}</div>
+      <div class="eq-bar" style="height:${Math.max(8,Math.round(q/maxQ*100))}%;background:${eqColors[i%eqColors.length]}"></div>
+      <div class="eq-bar-label" title="${n}">${n}</div>
+    </div>`).join(''):'<div style="color:var(--text3);font-size:12.5px;padding:20px 0;text-align:center;width:100%">Belum ada data penjualan di periode ini</div>';
 
   renderTrendChart(start,end);
   renderStokPieChart();
+}
+
+// Menggambar sparkline mini (garis atau bar) di canvas kecil dalam kartu
+// metrik Dashboard, gaya kartu "Revenue"/"Customers" pada referensi.
+// Sengaja pakai Canvas 2D manual (bukan Chart.js) supaya ringan & instan,
+// tanpa axis/legend/animasi berat untuk elemen sekecil ini.
+function drawSparkline(canvasId,data,type,color){
+  const canvas=document.getElementById(canvasId);
+  if(!canvas)return;
+  const ctx=canvas.getContext('2d');
+  const w=canvas.width,h=canvas.height;
+  ctx.clearRect(0,0,w,h);
+  if(!data||!data.length||data.every(v=>!v)){
+    ctx.strokeStyle='rgba(128,128,128,.25)';ctx.lineWidth=1.5;ctx.beginPath();
+    ctx.moveTo(2,h/2);ctx.lineTo(w-2,h/2);ctx.stroke();
+    return;
+  }
+  const max=Math.max(...data,1),min=Math.min(...data,0);
+  const range=(max-min)||1;
+  const pad=3;
+  const stepX=(w-pad*2)/Math.max(1,data.length-1);
+  if(type==='bar'){
+    const bw=Math.max(2,(w-pad*2)/data.length-3);
+    data.forEach((v,i)=>{
+      const bh=Math.max(2,((v-min)/range)*(h-pad*2));
+      const x=pad+i*((w-pad*2)/data.length)+1;
+      const y=h-pad-bh;
+      const grad=ctx.createLinearGradient(0,y,0,h-pad);
+      grad.addColorStop(0,color);grad.addColorStop(1,color+'55');
+      ctx.fillStyle=grad;
+      ctx.beginPath();
+      ctx.roundRect?ctx.roundRect(x,y,bw,bh,[2,2,0,0]):ctx.rect(x,y,bw,bh);
+      ctx.fill();
+    });
+  }else{
+    const pts=data.map((v,i)=>[pad+i*stepX,h-pad-((v-min)/range)*(h-pad*2)]);
+    const grad=ctx.createLinearGradient(0,0,0,h);
+    grad.addColorStop(0,color+'50');grad.addColorStop(1,color+'00');
+    ctx.beginPath();ctx.moveTo(pts[0][0],pts[0][1]);
+    for(let i=1;i<pts.length;i++)ctx.lineTo(pts[i][0],pts[i][1]);
+    ctx.lineTo(pts[pts.length-1][0],h-pad);ctx.lineTo(pts[0][0],h-pad);ctx.closePath();
+    ctx.fillStyle=grad;ctx.fill();
+    ctx.beginPath();ctx.moveTo(pts[0][0],pts[0][1]);
+    for(let i=1;i<pts.length;i++)ctx.lineTo(pts[i][0],pts[i][1]);
+    ctx.strokeStyle=color;ctx.lineWidth=2;ctx.lineJoin='round';ctx.lineCap='round';ctx.stroke();
+  }
 }
 
 function renderTrendChart(start,end){
@@ -1101,12 +1174,13 @@ function renderJualTable(){
       <td style="color:var(--text2)">${fmtRp(r.biayaTambahan!=null?r.biayaTambahan:0)}</td>
       <td class="sensitive-col" style="font-weight:700;color:${warnaLaba}">${fmtRp(laba)}</td>
       <td class="sensitive-col" style="font-weight:700;color:${warnaMargin}">${margin.toFixed(1)}%</td>
+      <td style="color:var(--text2)">${r.dibuatOleh?`<span title="Diinput pertama kali oleh ${r.dibuatOleh}">👤 ${r.dibuatOleh}</span>`:'–'}</td>
       <td><span class="badge ${ST_BADGE[r.status]||'badge-gray'}">${r.status}</span></td>
       <td>${canWriteOrders()?`<div class="action-cell">
         <button class="btn btn-sm btn-icon" title="Edit" onclick="bukaEditJual(${ri})">✏️</button>
         ${canDeleteOrders()?`<button class="btn btn-sm btn-icon btn-danger" title="Hapus" onclick="konfirmHapus('jual',${ri})">🗑</button>`:''}
       </div>`:''}</td>
-    </tr>`}).join(''):`<tr><td colspan="14" style="text-align:center;padding:32px;color:var(--text3)">Tidak ada data pesanan</td></tr>`;
+    </tr>`}).join(''):`<tr><td colspan="15" style="text-align:center;padding:32px;color:var(--text3)">Tidak ada data pesanan</td></tr>`;
   renderPagination('pag-jual',filteredJual.length,pageJual,p=>{pageJual=p;renderJualTable()});
 }
 
