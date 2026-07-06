@@ -19,6 +19,8 @@
 --      >>> CEK KEMBALI bagian ini kalau Anda punya file TAMBAH-INVENTORY.sql
 --          aslinya — mungkin ada kolom tambahan yang tidak tertangkap di sini.
 --   6. TAMBAH-AUDIT-TRAIL.sql    -> kolom created_by/updated_by otomatis
+--   7. [BARU] tabel log_aktivitas -> History Aktivitas (menu sidebar baru),
+--      mencatat semua tambah/edit/hapus/login/dst di seluruh aplikasi.
 --
 -- TIDAK disertakan (sengaja):
 --   - HAPUS-DATA-DUMMY.sql       -> ini script pembersihan data contoh,
@@ -283,8 +285,11 @@ create policy "role_write" on public.pesanan_item for all using (public.my_role(
 -- Migrasi data lama dari `penjualan` (kosong pada instalasi baru — aman & tidak
 -- melakukan apa-apa kalau tabel `penjualan` masih kosong; dipertahankan agar
 -- script ini tetap sama persis fungsinya kalau suatu saat ada data lama).
+-- Catatan: tabel arsip `penjualan` TIDAK punya kolom biaya_admin/biaya_tambahan
+-- (lihat definisinya di atas), jadi keduanya diisi null — nanti tetap bisa
+-- diisi manual lewat menu Edit Pesanan di aplikasi kalau perlu.
 insert into public.pesanan (no_pesanan, tanggal, tgl_iso, marketplace, status, biaya_admin, biaya_tambahan)
-select no_pesanan, tanggal, tgl_iso, marketplace, status, biaya_admin, biaya_tambahan
+select no_pesanan, tanggal, tgl_iso, marketplace, status, null, null
 from public.penjualan
 on conflict (no_pesanan) do nothing;
 
@@ -457,6 +462,37 @@ begin
     end if;
   end loop;
 end $$;
+
+
+-- =========================================================================
+-- BAGIAN 7 — HISTORY AKTIVITAS (log semua aktivitas tambah/edit/hapus/
+-- login/dst di seluruh aplikasi, ditampilkan di menu History pada sidebar)
+-- =========================================================================
+
+create table if not exists public.log_aktivitas (
+  id bigint generated always as identity primary key,
+  waktu timestamptz not null default now(),
+  aktor uuid references auth.users(id),
+  aktor_nama text not null default '',
+  aksi text not null default 'Lainnya',      -- Tambah/Edit/Hapus/Restock/Import/Restore/Reset/Rekonsiliasi/Login/Logout
+  entitas text not null default 'Sistem',    -- Pesanan/Stok Produk/Kategori/Marketplace/Pembelian/Penggajian/Biaya & HPP/Pengaturan Toko/User & Akses/Data/Sistem
+  keterangan text not null default '',
+  created_at timestamptz default now()
+);
+create index if not exists idx_log_aktivitas_waktu on public.log_aktivitas(waktu desc);
+
+alter table public.log_aktivitas enable row level security;
+
+-- Hanya Owner & Staff yang boleh MELIHAT history (menu ini disembunyikan
+-- dari Kasir/Viewer di sidebar, dan dikunci juga di level database supaya
+-- tidak bisa diakses lewat API langsung). Insert (mencatat log) boleh
+-- dilakukan oleh siapa pun yang punya role valid, termasuk Kasir — supaya
+-- aktivitas kasir (input pesanan, dsb) tetap tercatat walau dia sendiri
+-- tidak bisa membuka menu History-nya.
+drop policy if exists "role_select_log" on public.log_aktivitas;
+drop policy if exists "role_insert_log" on public.log_aktivitas;
+create policy "role_select_log" on public.log_aktivitas for select using (public.my_role() in ('owner','staff'));
+create policy "role_insert_log" on public.log_aktivitas for insert with check (public.my_role() in ('owner','staff','kasir','viewer'));
 
 
 -- =========================================================================
