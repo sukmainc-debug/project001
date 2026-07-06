@@ -180,6 +180,10 @@
       <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
       <span>Import Data</span>
     </div>
+    <div class="nav-item" data-menu="history" onclick="showSection('history',this)">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 14.5"/></svg>
+      <span>History</span>
+    </div>
     <div class="nav-item" data-menu="pengaturan" onclick="showSection('pengaturan',this)">
       <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
       <span>Pengaturan</span>
@@ -684,6 +688,59 @@
         <p style="font-size:12.5px;color:var(--text2);margin-bottom:10px">Jika angka "terjual" di menu Stok Gudang tidak sesuai dengan jumlah sebenarnya di Data Penjualan (misalnya karena data pernah diimport dari CSV sebelum perbaikan ini, atau nama produk sempat tidak persis sama), klik tombol di bawah untuk menghitung ulang <strong>stok</strong> dan <strong>terjual</strong> semua SKU dari awal berdasarkan seluruh data Penjualan yang aktif (bukan "Dibatalkan").</p>
         <button class="btn btn-primary" data-need="orders" onclick="rekonsiliasiStok()">🔄 Sinkronkan Ulang Stok dari Data Penjualan</button>
         <div id="rekonsiliasi-result" style="margin-top:12px"></div>
+      </div>
+    </div>
+
+    <!-- HISTORY AKTIVITAS -->
+    <div class="section" id="sec-history">
+      <div class="dash-hero">
+        <div>
+          <div class="dash-hero-title">History Aktivitas</div>
+          <div class="dash-hero-sub">Rekam jejak semua aktivitas tambah/edit/hapus/login yang dilakukan di aplikasi ini — untuk mengetahui siapa melakukan apa & kapan.</div>
+        </div>
+        <span id="history-count" style="font-size:12px;color:var(--text3)"></span>
+      </div>
+      <div class="filter-row">
+        <input class="form-input" style="flex:1;min-width:180px" placeholder="Cari keterangan atau nama user..." id="q-history" oninput="filterHistory()">
+        <select class="form-select" id="f-aksi-history" onchange="filterHistory()">
+          <option value="">Semua Aktivitas</option>
+          <option value="Tambah">Tambah</option>
+          <option value="Edit">Edit</option>
+          <option value="Hapus">Hapus</option>
+          <option value="Restock">Restock</option>
+          <option value="Rekonsiliasi">Rekonsiliasi</option>
+          <option value="Import">Import</option>
+          <option value="Restore">Restore</option>
+          <option value="Reset">Reset</option>
+          <option value="Login">Login</option>
+          <option value="Logout">Logout</option>
+        </select>
+        <select class="form-select" id="f-entitas-history" onchange="filterHistory()">
+          <option value="">Semua Data</option>
+          <option value="Pesanan">Pesanan</option>
+          <option value="Stok Produk">Stok Produk</option>
+          <option value="Kategori">Kategori</option>
+          <option value="Marketplace">Marketplace</option>
+          <option value="Pembelian">Pembelian</option>
+          <option value="Penggajian">Penggajian</option>
+          <option value="Biaya & HPP">Biaya & HPP</option>
+          <option value="Pengaturan Toko">Pengaturan Toko</option>
+          <option value="User & Akses">User & Akses</option>
+          <option value="Data">Data</option>
+          <option value="Sistem">Sistem</option>
+        </select>
+        <button class="btn btn-sm" onclick="filterHistory()">🔄 Muat Ulang</button>
+      </div>
+      <div class="card">
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Waktu</th><th>Aktivitas</th><th>Data</th><th>Keterangan</th><th>Oleh</th></tr></thead>
+            <tbody id="tbl-history"></tbody>
+          </table>
+        </div>
+        <div style="text-align:center;padding:14px">
+          <button class="btn btn-sm" id="btn-history-more" onclick="muatHistoryLebihBanyak()" style="display:none">⬇️ Muat Lebih Banyak</button>
+        </div>
       </div>
     </div>
 
