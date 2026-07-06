@@ -82,6 +82,19 @@ function mpTagStyle(nama){const c=getMpColor(nama);return `background:${c}22;col
 function rnd(a,b){return Math.floor(Math.random()*(b-a+1))+a}
 function fmtRp(n){const v=Number(n);return 'Rp '+(isFinite(v)?Math.round(v):0).toLocaleString('id-ID')}
 function fmtTgl(d){return d.toLocaleDateString('id-ID',{day:'2-digit',month:'2-digit',year:'numeric'})}
+// Format tanggal update jadi "waktu relatif" (mis. "5 menit lalu", "3 hari
+// lalu") supaya sekilas kelihatan mana SKU yang datanya sudah lama tidak
+// diperbarui — dipakai di kolom "Update Terakhir" menu Stok & Gudang.
+function fmtWaktuRelatif(iso){
+  if(!iso)return'–';
+  const d=new Date(iso);if(isNaN(d))return'–';
+  const detik=Math.floor((Date.now()-d.getTime())/1000);
+  if(detik<60)return'Baru saja';
+  const menit=Math.floor(detik/60);if(menit<60)return menit+' menit lalu';
+  const jam=Math.floor(menit/60);if(jam<24)return jam+' jam lalu';
+  const hari=Math.floor(jam/24);if(hari<30)return hari+' hari lalu';
+  return fmtTgl(d);
+}
 function today(){return new Date().toISOString().split('T')[0]}
 function getKatNames(){return DB.kategori.map(k=>k.nama)}
 function getKatColor(nama){const k=DB.kategori.find(k=>k.nama===nama);return k?k.color:'#888'}
@@ -164,7 +177,7 @@ async function syncMarketplace_(){
 }
 async function syncStok_(){
   await safeReplace(TBL_STOK, DB.stok.map(s=>{
-    return{sku:s.sku,produk:s.prod,varian:s.varian||'',kategori:s.kat||'Lainnya',stok:s.stok!=null?s.stok:0,terjual:s.terjual!=null?s.terjual:0,hpp:s.hpp!=null?s.hpp:0};
+    return{sku:s.sku,produk:s.prod,varian:s.varian||'',kategori:s.kat||'Lainnya',stok:s.stok!=null?s.stok:0,terjual:s.terjual!=null?s.terjual:0,hpp:s.hpp!=null?s.hpp:0,updated_at:s.updatedAt||new Date().toISOString()};
   }), 'sku');
 }
 // Sinkron pesanan (skema BARU multi-item): header ke tabel `pesanan`,
@@ -300,7 +313,7 @@ async function loadFromSupabase(){
 
     const kategori=(katRes.data||[]).map(k=>({nama:k.nama,color:k.color}));
     const marketplace=(mpRes.data||[]).map(m=>({nama:m.nama,color:m.color}));
-    const stok=(stokRes.data||[]).map(s=>({sku:s.sku,prod:s.produk,varian:s.varian,kat:s.kategori,stok:s.stok,terjual:s.terjual,hpp:Number(s.hpp)||0,created_at:s.created_at||null}));
+    const stok=(stokRes.data||[]).map(s=>({sku:s.sku,prod:s.produk,varian:s.varian,kat:s.kategori,stok:s.stok,terjual:s.terjual,hpp:Number(s.hpp)||0,created_at:s.created_at||null,updatedAt:s.updated_at||s.created_at||null}));
 
     // Kelompokkan baris pesanan_item berdasarkan pesanan_id, lalu gabungkan
     // dengan header masing-masing dari tabel `pesanan` -> jadi 1 pesanan (bisa
@@ -1394,6 +1407,7 @@ function terapkanEfekStok(order,arah){
       si.stok=(si.stok||0)+(item.qty||0);
       si.terjual=Math.max(0,(si.terjual||0)-(item.qty||0));
     }
+    si.updatedAt=new Date().toISOString(); // catat kapan stok SKU ini terakhir berubah
   });
 }
 // ===== REKONSILIASI: hitung ulang "terjual" per SKU dari SELURUH data
@@ -1421,6 +1435,7 @@ function rekonsiliasiStok(){
       jumlahDiperbaiki++;
       si.stok=Math.max(0,(si.stok||0)-selisih);
       si.terjual=targetTerjual;
+      si.updatedAt=new Date().toISOString();
     }
   });
   saveDB(['stok']);filteredStok=[...DB.stok];renderStokTable();renderDashboard();
@@ -1499,13 +1514,14 @@ function renderStokTable(){
       <td style="color:var(--text2)">${fmtRp(r.hpp||0)}</td>
       <td style="color:var(--text2)">${r.terjual} pcs</td>
       <td style="color:var(--text3)">${hariHabis}</td>
+      <td style="color:var(--text2)" title="${r.updatedAt?new Date(r.updatedAt).toLocaleString('id-ID'):'–'}">🕓 ${fmtWaktuRelatif(r.updatedAt||r.created_at)}</td>
       <td><span class="badge ${badge}">${status}</span></td>
       <td>${actionCellRW(`<div class="action-cell">
         <button class="btn btn-sm btn-icon" title="Edit" onclick="bukaEditStok(${ri})">✏️</button>
         <button class="btn btn-sm btn-icon btn-success" title="Restock" onclick="bukaRestock(${ri})">+ Stok</button>
         <button class="btn btn-sm btn-icon btn-danger" title="Hapus" onclick="konfirmHapus('stok',${ri})">🗑</button>
       </div>`)}</td>
-    </tr>`}).join(''):`<tr><td colspan="10" style="text-align:center;padding:32px;color:var(--text3)">Tidak ada data stok</td></tr>`;
+    </tr>`}).join(''):`<tr><td colspan="11" style="text-align:center;padding:32px;color:var(--text3)">Tidak ada data stok</td></tr>`;
   renderPagination('pag-stok',filteredStok.length,pageStok,p=>{pageStok=p;renderStokTable()});
 }
 
@@ -1544,6 +1560,7 @@ function simpanStok(){
     stok:parseInt(document.getElementById('s-stok').value)||0,terjual:parseInt(document.getElementById('s-terjual').value)||0,
     hpp:parseFloat(document.getElementById('s-hpp').value)||0};
   if(!r.prod){alert('Nama produk wajib diisi');return}
+  r.updatedAt=new Date().toISOString();
   if(idx!==''&&idx>=0){DB.stok[parseInt(idx)]=Object.assign({},DB.stok[parseInt(idx)],r)}
   else{r.created_at=new Date().toISOString();DB.stok.unshift(r)}
   saveDB(['stok']);filteredStok=[...DB.stok];renderStokTable();renderDashboard();closeModal('modal-tambah-stok');
@@ -1558,7 +1575,7 @@ function bukaRestock(idx){
 function simpanRestock(){
   if(!canWrite()){alert("Anda tidak punya izin untuk restock.");return}
   if(_restockIdx<0)return;const tambah=parseInt(document.getElementById('rs-tambah').value)||0;
-  DB.stok[_restockIdx].stok+=tambah;saveDB(['stok']);filteredStok=[...DB.stok];renderStokTable();renderDashboard();closeModal('modal-restock');_restockIdx=-1;
+  DB.stok[_restockIdx].stok+=tambah;DB.stok[_restockIdx].updatedAt=new Date().toISOString();saveDB(['stok']);filteredStok=[...DB.stok];renderStokTable();renderDashboard();closeModal('modal-restock');_restockIdx=-1;
 }
 
 // ===== HAPUS =====
@@ -2689,7 +2706,7 @@ function processCSV(file,type){
       for(let i=1;i<lines.length;i++){
         const cols=parseCSVLine(lines[i]);const row={};headers.forEach((h,j)=>row[h]=(cols[j]||'').trim());
         try{
-          DB.stok.push({sku:row.sku||'SKU-IMP-'+i,prod:row.produk||'–',varian:row.varian||'',kat:row.kategori||'Lainnya',stok:parseInt(row.stok||0),terjual:parseInt(row.terjual_30h||row.terjual||0),hpp:parseFloat((row.hpp||'0').replace(/[^0-9.]/g,''))||0,created_at:new Date().toISOString()});
+          DB.stok.push({sku:row.sku||'SKU-IMP-'+i,prod:row.produk||'–',varian:row.varian||'',kat:row.kategori||'Lainnya',stok:parseInt(row.stok||0),terjual:parseInt(row.terjual_30h||row.terjual||0),hpp:parseFloat((row.hpp||'0').replace(/[^0-9.]/g,''))||0,created_at:new Date().toISOString(),updatedAt:new Date().toISOString()});
           imported++;
         }catch(err){errors++}
       }
