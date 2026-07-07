@@ -43,20 +43,9 @@ function ringkasProdukPesanan(r){
 // pesanan, supaya penjumlahan laba per produk tetap akurat dan tidak dobel-hitung.
 function flattenPenjualan(list){
   const out=[];
-  const biaya=DB.biaya||DEFAULT_BIAYA;
   (list||DB.penjualan).forEach(r=>{
     const items=r.items||[];
     const orderTotal=r.total!=null?r.total:hitungTotalItems(items);
-    // PERBAIKAN: biaya tambahan default (ongkir+packaging+lain di menu Biaya
-    // & HPP) adalah biaya PER PESANAN, bukan per barang. Sebelumnya, kalau
-    // pesanan tidak mengisi "biaya tambahan" manual, hitungLaba() memakai
-    // nilai default ini APA ADANYA di SETIAP baris barang hasil flatten —
-    // akibatnya pesanan dengan 2 barang dihitung ongkir 2x, 3 barang 3x,
-    // dst. Ini yang membuat Estimasi Laba Bersih meleset (kebiaya-lebih)
-    // untuk pesanan multi-item. Sekarang nilai default dihitung SEKALI per
-    // pesanan, lalu dialokasikan proporsional ke tiap barang (persis seperti
-    // cara biayaAdmin dialokasikan), sehingga totalnya kembali benar.
-    const defaultExtraOrder=(biaya.extra.ongkir||0)+(biaya.extra.packaging||0)+(biaya.extra.lain||0);
     items.forEach(it=>{
       const share=orderTotal>0?(Number(it.subtotal)||0)/orderTotal:(items.length?1/items.length:0);
       out.push({
@@ -64,7 +53,7 @@ function flattenPenjualan(list){
         prod:it.prod,varian:it.varian||'',kat:it.kat||'Lainnya',qty:it.qty||1,
         total:Number(it.subtotal)||0,
         biayaAdmin:r.biayaAdmin!=null?r.biayaAdmin*share:null,
-        biayaTambahan:r.biayaTambahan!=null?r.biayaTambahan*share:defaultExtraOrder*share,
+        biayaTambahan:r.biayaTambahan!=null?r.biayaTambahan*share:null,
         _order:r
       });
     });
@@ -634,18 +623,6 @@ async function lupaKodeAkses(){
     loginAlert('✅ Link atur ulang kode akses sudah dikirim ke '+email+'. Cek inbox/folder spam Anda.','success');
   }catch(e){loginAlert('Gagal mengirim email reset: '+e.message)}
 }
-// Isi tag tanggal kecil di pojok kartu login (gaya "OMNISELLER CORE · tanggal")
-(function isiTanggalAuth(){
-  const teks=new Date().toLocaleDateString('id-ID',{day:'2-digit',month:'2-digit',year:'numeric'});
-  document.addEventListener('DOMContentLoaded',()=>{
-    const a=document.getElementById('auth-date-tag');if(a)a.textContent=teks;
-    const b=document.getElementById('auth-date-tag2');if(b)b.textContent=teks;
-    // Kode "ID-XXXX" kecil di sisi kanan kolom ID Pengguna — murni dekoratif
-    // (gaya HUD ala kartu referensi "Nexus Access"), dibuat acak per sesi.
-    const idTag=document.getElementById('auth-id-tag');
-    if(idTag)idTag.textContent='ID-'+String(Math.floor(1000+Math.random()*9000));
-  });
-})();
 function updateAdminInfo(){
   const emailEl=document.getElementById('info-admin-email');
   const sinceEl=document.getElementById('info-admin-since');
