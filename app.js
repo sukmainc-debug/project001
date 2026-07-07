@@ -52,12 +52,9 @@ function flattenPenjualan(list){
         no:r.no,tanggal:r.tanggal,_date:r._date,mp:r.mp,status:r.status,
         prod:it.prod,varian:it.varian||'',kat:it.kat||'Lainnya',qty:it.qty||1,
         total:Number(it.subtotal)||0,
+        hpp:it.hpp!=null?it.hpp:null,
         biayaAdmin:r.biayaAdmin!=null?r.biayaAdmin*share:null,
         biayaTambahan:r.biayaTambahan!=null?r.biayaTambahan*share:null,
-        // HPP beku (snapshot) per barang, diisi saat pesanan disimpan (lihat
-        // hitungHppSnapshot()). Kalau null berarti data lama sebelum fitur ini
-        // ada -> hitungLaba() akan jatuh ke perhitungan dinamis seperti dulu.
-        hpp:it.hpp!=null?Number(it.hpp):null,
         _order:r
       });
     });
@@ -217,10 +214,6 @@ async function syncPenjualan_(){
         pesanan_id:pid,produk:it.prod,varian:it.varian||'',kategori:it.kat||'Lainnya',
         qty:it.qty!=null?it.qty:1,harga_satuan:it.harga!=null?it.harga:0,
         subtotal:it.subtotal!=null?it.subtotal:(it.qty||1)*(it.harga||0),
-        // HPP beku (snapshot) -- kolom ini sudah ada di skema tabel
-        // pesanan_item (hpp_saat_transaksi) tapi sebelumnya tidak pernah
-        // dipakai; sekarang diisi supaya laba transaksi lama tidak ikut
-        // berubah kalau HPP produk diubah di kemudian hari.
         hpp_saat_transaksi:it.hpp!=null?it.hpp:null
       });
     });
@@ -1369,10 +1362,7 @@ function bukaEditJual(idx){
   document.getElementById('f-biaya-tambahan').value=r.biayaTambahan!=null?r.biayaTambahan:Math.round(getSaranBiayaTambahan());
   populateKatDropdowns();
   populateProdukDatalist();
-  // PENTING: bawa juga `hpp` (snapshot beku) dari data lama -> supaya kalau
-  // pesanan ini diedit & disimpan ulang, HPP historisnya TIDAK dihitung ulang
-  // dari harga HPP terkini (lihat hitungHppSnapshot() & simpanPesanan()).
-  _formItems=(r.items&&r.items.length?r.items:[{prod:'',varian:'',kat:'',qty:1,harga:0}]).map(it=>({prod:it.prod,varian:it.varian||'',kat:it.kat||'',qty:it.qty||1,harga:it.harga!=null?it.harga:(it.subtotal&&it.qty?Math.round(it.subtotal/it.qty):0),hpp:it.hpp!=null?it.hpp:null}));
+  _formItems=(r.items&&r.items.length?r.items:[{prod:'',varian:'',kat:'',qty:1,harga:0,hpp:null}]).map(it=>({prod:it.prod,varian:it.varian||'',kat:it.kat||'',qty:it.qty||1,harga:it.harga!=null?it.harga:(it.subtotal&&it.qty?Math.round(it.subtotal/it.qty):0),hpp:it.hpp!=null?it.hpp:null}));
   renderFormItems();
   openModal('modal-tambah-jual');
 }
@@ -1425,32 +1415,19 @@ function escAttr(s){return esc(s).replace(/`/g,'&#96;')}
 // 1 pesanan bisa berisi beberapa barang berbeda (mis. checkout gabungan).
 // `_formItems` menyimpan baris-baris barang yang sedang diedit di modal.
 let _formItems=[];
-function kosongkanFormItems(){_formItems=[{prod:'',varian:'',kat:'',qty:1,harga:0}]}
-function tambahBarisItem(){_formItems.push({prod:'',varian:'',kat:'',qty:1,harga:0});renderFormItems()}
+// `hpp:null` berarti "belum dibekukan" -> akan otomatis terisi dari HPP Stok
+// Gudang begitu produk/varian dipilih (lihat updateBarisItem). Setelah baris
+// tersimpan sebagai pesanan, nilai hpp ini TIDAK berubah lagi walau HPP
+// master di Stok Gudang naik/turun di kemudian hari (lihat hitungLaba()).
+function kosongkanFormItems(){_formItems=[{prod:'',varian:'',kat:'',qty:1,harga:0,hpp:null}]}
+function tambahBarisItem(){_formItems.push({prod:'',varian:'',kat:'',qty:1,harga:0,hpp:null});renderFormItems()}
 function hapusBarisItem(i){if(_formItems.length<=1){alert('Pesanan harus punya minimal 1 barang.');return}_formItems.splice(i,1);renderFormItems()}
 function updateBarisItem(i,field,val){
   const it=_formItems[i];if(!it)return;
-  if(field==='qty'){
-    it.qty=Math.max(1,parseInt(val)||1);
-    // Qty barang ini berubah -> HPP beku (snapshot) lama (dihitung utk qty
-    // SEBELUMNYA) sudah tidak relevan. Kosongkan supaya dihitung ulang &
-    // dibekukan lagi dgn qty yang benar saat pesanan disimpan.
-    it.hpp=null;
-  }
-  else if(field==='harga'){
-    it.harga=Math.max(0,parseFloat(val)||0);
-    // Kalau mode HPP = % dari harga jual, HPP ikut bergantung ke harga jual
-    // -> harus dihitung ulang juga kalau harga berubah. Mode "per produk"
-    // tidak bergantung ke harga jual, jadi snapshot lama masih valid & tidak
-    // perlu direset.
-    if((DB.biaya&&DB.biaya.hpp_mode)==='pct')it.hpp=null;
-  }
+  if(field==='qty')it.qty=Math.max(1,parseInt(val)||1);
+  else if(field==='harga')it.harga=Math.max(0,parseFloat(val)||0);
   else it[field]=val;
   if(field==='prod'||field==='varian'){
-    // Produk/varian barang ini berubah -> HPP beku lama (milik produk yang
-    // BERBEDA) sudah tidak relevan sama sekali. Kosongkan supaya dihitung
-    // ulang dari data Stok & Gudang produk yang baru saat pesanan disimpan.
-    it.hpp=null;
     // Sinkron kategori otomatis: coba cocok PERSIS (produk+varian) dulu;
     // kalau varian belum diisi/tidak cocok, tetap coba cocokkan dari nama
     // produk saja (kategori varian pertama yang ditemukan) supaya kategori
@@ -1458,7 +1435,15 @@ function updateBarisItem(i,field,val){
     // menunggu varian juga persis sama.
     let si=cariStok((it.prod||'').trim(),(it.varian||'').trim());
     if(!si)si=DB.stok.find(s=>s.prod===(it.prod||'').trim());
-    if(si)it.kat=si.kat;
+    if(si){
+      it.kat=si.kat;
+      // Bekukan HPP produk ini SAAT INI ke baris pesanan (bukan mengambil HPP
+      // live tiap kali laporan dibuka). Sengaja di-update setiap kali user
+      // MENGUBAH produk/varian baris ini (karena barangnya memang berganti,
+      // jadi wajar snapshot ikut berganti) — tapi TIDAK pernah ditimpa diam-diam
+      // hanya karena laporan dibuka ulang atau HPP master berubah di kemudian hari.
+      it.hpp=si.hpp!=null?si.hpp:0;
+    }
   }
   // PENTING: jangan panggil renderFormItems() (rebuild total DOM) di sini —
   // itu penyebab bug "1 klik = 1 huruf/angka": setiap event oninput akan
@@ -1467,6 +1452,18 @@ function updateBarisItem(i,field,val){
   // Cukup perbarui bagian yang perlu berubah (subtotal, datalist varian,
   // total, hint stok) tanpa mengganti elemen input yang sedang diketik.
   updateRowDisplay(i,field);
+}
+// Refresh MANUAL HPP baris ke harga terbaru di Stok Gudang (dipakai lewat
+// tombol "🔄" di tiap baris saat Edit Pesanan). Sengaja hanya jalan kalau
+// user klik sendiri -> supaya pembaruan HPP pesanan lama selalu merupakan
+// tindakan sadar, bukan efek samping tersembunyi dari mengedit hal lain.
+function refreshHppBaris(i){
+  const it=_formItems[i];if(!it)return;
+  const si=cariStok((it.prod||'').trim(),(it.varian||'').trim())||DB.stok.find(s=>s.prod===(it.prod||'').trim());
+  if(!si){alert('Produk/varian ini tidak ditemukan di Stok Gudang.');return}
+  it.hpp=si.hpp!=null?si.hpp:0;
+  updateFormLabaMargin();
+  alert('HPP baris ini diperbarui ke Rp '+Math.round(it.hpp).toLocaleString('id-ID')+'/pcs (harga Stok Gudang saat ini).');
 }
 function formTotalPesanan(){return _formItems.reduce((a,it)=>a+((it.qty||0)*(it.harga||0)),0)}
 // ===== ESTIMASI LABA & MARGIN PER PESANAN (real-time di form Tambah/Edit) =====
@@ -1479,10 +1476,6 @@ function hitungLabaFormPesanan(){
   const mpEl=document.getElementById('f-mp');const mp=mpEl?mpEl.value:'';
   const adminRaw=(document.getElementById('f-biaya-admin').value||'').trim();
   const tambahanRaw=(document.getElementById('f-biaya-tambahan').value||'').trim();
-  // Sertakan `hpp` snapshot (kalau ada, mis. saat edit pesanan lama) supaya
-  // preview ini konsisten dengan hasil final setelah disimpan; untuk barang
-  // baru yang belum punya snapshot, hitungLaba() akan pakai estimasi HPP
-  // terkini sebagai preview (baru dibekukan betulan saat tombol Simpan ditekan).
   const items=_formItems.map(it=>({prod:(it.prod||'').trim(),varian:(it.varian||'').trim(),kat:it.kat||'Lainnya',qty:it.qty||1,harga:it.harga||0,subtotal:(it.qty||0)*(it.harga||0),hpp:it.hpp!=null?it.hpp:null}));
   const tempOrder={mp,biayaAdmin:adminRaw!==''?(parseFloat(adminRaw)||0):null,biayaTambahan:tambahanRaw!==''?(parseFloat(tambahanRaw)||0):null,items};
   recalcOrderTotal(tempOrder);
@@ -1493,16 +1486,7 @@ function hitungLabaFormPesanan(){
 function updateFormLabaMargin(){
   const labaEl=document.getElementById('f-laba-display');const marginEl=document.getElementById('f-margin-display');
   if(!labaEl||!marginEl)return;
-  const{laba,margin,omzet}=hitungLabaFormPesanan();
-  // Fix "estimasi laba" muncul duluan sebelum ada barang diinput: kalau omzet
-  // masih 0 (belum ada barang valid dengan qty & harga > 0), jangan tampilkan
-  // angka laba/margin sama sekali -- itu cuma proyeksi dari Biaya Tambahan
-  // default yang belum relevan sebelum ada transaksi sungguhan.
-  if(!omzet){
-    labaEl.textContent='–';labaEl.style.color='var(--text3)';
-    marginEl.textContent='–';marginEl.style.color='var(--text3)';
-    return;
-  }
+  const{laba,margin}=hitungLabaFormPesanan();
   const warna=laba>=0?'var(--success)':'var(--danger)';
   const warnaMargin=margin>=20?'var(--success)':margin>=0?'var(--warning)':'var(--danger)';
   labaEl.textContent=fmtRp(laba);labaEl.style.color=warna;
@@ -1544,6 +1528,10 @@ function renderFormItems(){
       <div class="form-group" style="margin:0"><label style="font-size:11px">Subtotal</label>
         <div class="item-subtotal" style="padding:8px 0;font-weight:700">${fmtRp((it.qty||0)*(it.harga||0))}</div></div>
       <button type="button" class="btn btn-sm btn-icon btn-danger" title="Hapus barang ini" onclick="hapusBarisItem(${i})">🗑</button>
+    </div>
+    <div class="sensitive-col" style="font-size:11px;color:var(--text3);margin:-8px 0 10px;display:flex;align-items:center;gap:6px">
+      ${it.hpp!=null?`🔒 HPP dipakai untuk pesanan ini: <strong>${fmtRp(it.hpp)}</strong>/pcs (dibekukan, tidak ikut berubah walau HPP di Stok Gudang diubah nanti)`:'⚠️ HPP belum dibekukan — pastikan produk/varian cocok dengan data Stok Gudang'}
+      <button type="button" class="btn btn-sm" style="padding:2px 8px;font-size:10px" title="Perbarui HPP baris ini ke harga terbaru di Stok Gudang" onclick="refreshHppBaris(${i})">🔄 Refresh HPP</button>
     </div>`).join('');
   _formItems.forEach((it,i)=>{
     const dl=document.getElementById('dl-varian-row-'+i);
@@ -1648,38 +1636,11 @@ function simpanPesanan(){
     const lanjut=confirm('⚠️ '+tanpaStok.length+' barang tidak ditemukan persis sama di Stok Gudang:\n'+tanpaStok.map(it=>'- '+it.prod+(it.varian?' - '+it.varian:'')).join('\n')+'\n\nStok TIDAK akan otomatis berkurang untuk barang tersebut.\n\nLanjutkan simpan? (Klik Batal untuk perbaiki nama produk/varian dulu)');
     if(!lanjut)return;
   }
-  // PENTING (snapshot HPP): kalau baris ini SUDAH punya HPP beku (mis. sedang
-  // edit pesanan lama), pertahankan apa adanya -- JANGAN dihitung ulang dari
-  // HPP/persentase yang berlaku sekarang. Hanya barang yang belum pernah
-  // punya snapshot (pesanan baru, atau baris baru yang ditambahkan saat edit)
-  // yang HPP-nya dihitung & dibekukan sekarang, lalu tidak akan berubah lagi
-  // walau HPP produk dinaikkan/diturunkan di kemudian hari.
-  const items=itemsValid.map(it=>{
-    const subtotal=(it.qty||1)*(it.harga||0);
-    const hpp=it.hpp!=null?it.hpp:hitungHppSnapshot(it.prod.trim(),(it.varian||'').trim(),it.qty||1,subtotal);
-    return{prod:it.prod.trim(),varian:(it.varian||'').trim(),kat:it.kat||'Lainnya',qty:it.qty||1,harga:it.harga||0,subtotal,hpp};
-  });
-  const mpTerpilih=document.getElementById('f-mp').value;
-  const totalPesananIni=hitungTotalItems(items);
-  const adminRaw=(document.getElementById('f-biaya-admin').value||'').trim();
-  const tambahanRaw=(document.getElementById('f-biaya-tambahan').value||'').trim();
-  // PERBAIKAN PENTING (bug "laba bersih ke-inflate"): field yang DIKOSONGKAN
-  // bukan berarti Rp 0 -- itu berarti "biarkan sistem mengestimasi", persis
-  // seperti yang ditampilkan di preview Estimasi Laba. Sebelumnya kode di sini
-  // memakai `parseFloat('')||0`, sehingga kalau pengguna lupa isi/klik "Saran",
-  // Biaya Admin Marketplace tersimpan sebagai 0 -- padahal marketplace
-  // biasanya memotong 1.8%-4%, jadi laba bersih pesanan itu jadi tercatat
-  // terlalu besar. Kalau pengguna memang mengetik angka 0 secara eksplisit
-  // (mis. transaksi tanpa biaya admin), itu tetap dihormati sebagai 0.
-  // Estimasi dihitung & DIBEKUKAN di sini (bukan disimpan sebagai null),
-  // konsisten dengan cara HPP dibekukan, supaya tidak ikut berubah lagi kalau
-  // pengaturan % admin/biaya tambahan default diubah di kemudian hari.
-  const biayaAdminFinal=adminRaw!==''?(parseFloat(adminRaw)||0):Math.round(getSaranBiayaAdmin(mpTerpilih,totalPesananIni));
-  const biayaTambahanFinal=tambahanRaw!==''?(parseFloat(tambahanRaw)||0):Math.round(getSaranBiayaTambahan());
-  const r={no,tanggal:fmtTgl(new Date(tgl)),_date:new Date(tgl).toISOString(),mp:mpTerpilih,
+  const items=itemsValid.map(it=>({prod:it.prod.trim(),varian:(it.varian||'').trim(),kat:it.kat||'Lainnya',qty:it.qty||1,harga:it.harga||0,subtotal:(it.qty||1)*(it.harga||0),hpp:it.hpp!=null?it.hpp:null}));
+  const r={no,tanggal:fmtTgl(new Date(tgl)),_date:new Date(tgl).toISOString(),mp:document.getElementById('f-mp').value,
     status:document.getElementById('f-status').value,
-    biayaAdmin:biayaAdminFinal,
-    biayaTambahan:biayaTambahanFinal,
+    biayaAdmin:parseFloat(document.getElementById('f-biaya-admin').value)||0,
+    biayaTambahan:parseFloat(document.getElementById('f-biaya-tambahan').value)||0,
     items};
   recalcOrderTotal(r);
   if(idx!==''&&idx>=0){
@@ -2171,37 +2132,24 @@ function hitungLaba(r){
   else{extra=(biaya.extra.ongkir||0)+(biaya.extra.packaging||0)+(biaya.extra.lain||0)}
   let hpp=0;
   const hppPct=biaya.hpp_pct!=null?biaya.hpp_pct:45;
-  // PENTING (fix "HPP berubah, laba lama ikut berubah"): kalau barisnya sudah
-  // punya HPP beku (snapshot diambil & dikunci saat pesanan itu disimpan —
-  // lihat hitungHppSnapshot() & simpanPesanan()), PAKAI itu apa adanya. Jangan
-  // hitung ulang dari harga HPP/persentase yang berlaku SEKARANG, supaya
-  // kenaikan/penurunan HPP di masa depan tidak mengubah laba transaksi lama.
-  // Hanya jatuh ke perhitungan dinamis (harga HPP terkini) kalau barisnya
-  // belum punya snapshot sama sekali — ini terjadi untuk data lama yang
-  // dibuat sebelum fitur ini ada (r.hpp==null).
-  if(r.hpp!=null){
-    hpp=r.hpp;
-  }else if(biaya.hpp_mode==='pct'){
+  if(biaya.hpp_mode==='pct'){
+    // Mode % global: bukan HPP per-produk, jadi tetap ikuti pengaturan saat
+    // ini (di luar cakupan pembekuan HPP per transaksi).
     hpp=hppPct/100*omzet;
+  }else if(r.hpp!=null){
+    // ✅ PAKAI HPP YANG SUDAH DIBEKUKAN saat pesanan ini dibuat/diedit —
+    // supaya laba pesanan lama TIDAK ikut berubah kalau HPP produk di Stok
+    // Gudang naik/turun setelahnya. Ini nilai yang disimpan di kolom
+    // `hpp_saat_transaksi` (tabel pesanan_item).
+    hpp=r.hpp*(r.qty||1);
   }else{
+    // Fallback HANYA untuk data lama yang dibuat sebelum fitur pembekuan HPP
+    // ini ada (belum punya snapshot) -> pakai HPP master saat ini seperti
+    // perilaku lama, sampai pesanan tsb diedit ulang dan snapshot terisi.
     const ph=getHppDariStok(r.prod,r.varian);hpp=(ph!=null)?ph*(r.qty||1):hppPct/100*omzet;
   }
   const laba=omzet-mpFee-extra-hpp;
   return{omzet,hpp,mpFee,extra,laba,margin:omzet>0?laba/omzet*100:0};
-}
-
-// Hitung & KUNCI nilai HPP satu barang pada saat pesanan disimpan (dipanggil
-// dari simpanPesanan() untuk barang yang belum punya snapshot). Sumbernya
-// sama seperti perhitungan dinamis lama (HPP dari Stok & Gudang, atau %
-// global kalau modenya persentase) -- bedanya, hasil hitungan ini DIBEKUKAN
-// ke dalam data pesanan (kolom hpp_saat_transaksi di Supabase) dan tidak akan
-// ikut berubah lagi walau HPP produk atau % global diubah kemudian hari.
-function hitungHppSnapshot(prod,varian,qty,subtotal){
-  const biaya=DB.biaya||DEFAULT_BIAYA;
-  const hppPct=biaya.hpp_pct!=null?biaya.hpp_pct:45;
-  if(biaya.hpp_mode==='pct')return hppPct/100*(subtotal||0);
-  const ph=getHppDariStok(prod,varian);
-  return ph!=null?ph*(qty||1):hppPct/100*(subtotal||0);
 }
 
 function getLabaPerProduk(filterMP,filterKat){
@@ -2933,11 +2881,7 @@ function processCSV(file,type){
           if(harga==null)harga=subtotal!=null&&qty>0?Math.round(subtotal/qty):0;
           if(subtotal==null)subtotal=qty*harga;
           if((row.produk||'').trim()){
-            // Bekukan HPP saat import juga, supaya data hasil import konsisten
-            // dengan pesanan yang diinput manual -- tidak ikut berubah kalau
-            // HPP produk diubah setelah file CSV ini diimpor.
-            const prodTrim=row.produk.trim(),varTrim=(row.varian||'').trim();
-            grouped[key].items.push({prod:prodTrim,varian:varTrim,kat:row.kategori||'Lainnya',qty,harga,subtotal,hpp:hitungHppSnapshot(prodTrim,varTrim,qty,subtotal)});
+            grouped[key].items.push({prod:row.produk.trim(),varian:(row.varian||'').trim(),kat:row.kategori||'Lainnya',qty,harga,subtotal});
           }
           imported++;
         }catch(err){errors++}
@@ -2946,14 +2890,6 @@ function processCSV(file,type){
         const orderBaru=grouped[key];
         if(!orderBaru.items.length)orderBaru.items=[{prod:'–',varian:'',kat:'Lainnya',qty:1,harga:0,subtotal:0}];
         recalcOrderTotal(orderBaru);
-        // Kalau file CSV tidak mengisi kolom biaya_admin/biaya_tambahan (nilainya
-        // null), bekukan estimasinya SEKARANG (bukan dibiarkan null selamanya) --
-        // konsisten dengan cara HPP & pesanan manual dibekukan, supaya laba
-        // pesanan hasil import ini tidak ikut berubah kalau pengaturan %
-        // admin/biaya tambahan default diubah nanti. Pengguna tetap bisa
-        // menimpanya manual lewat Edit Pesanan seperti biasa.
-        if(orderBaru.biayaAdmin==null)orderBaru.biayaAdmin=Math.round(getSaranBiayaAdmin(orderBaru.mp,orderBaru.total));
-        if(orderBaru.biayaTambahan==null)orderBaru.biayaTambahan=Math.round(getSaranBiayaTambahan());
         // Cegah No. Pesanan duplikat dengan data yang SUDAH ada sebelumnya di aplikasi
         // (yang menyebabkan gagal sinkron ke Supabase): timpa (update), jangan tambah baris baru.
         const idxAda=DB.penjualan.findIndex(r=>r.no.trim().toLowerCase()===key);
