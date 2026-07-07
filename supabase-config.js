@@ -4,29 +4,7 @@ const SUPABASE_URL = 'https://jmxlryjmijuusxwmqxrl.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpteGxyeWptaWp1dXN4d21xeHJsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODMyNDIxOTksImV4cCI6MjA5ODgxODE5OX0.AAf9QG3Cwv49sZQxkyLhDI27uixTbg_QV8vx9OVzjEI';
 
 // Inisialisasi client Supabase (tersedia secara global sebagai `supabaseClient`)
-// PENTING: dibungkus try/catch dan diberi nilai awal `null`. Kalau ditulis
-// polos seperti sebelumnya (`const supabaseClient = supabase.createClient(...)`)
-// dan script CDN Supabase gagal dimuat (internet lambat/mati, CDN diblokir
-// firewall/jaringan kantor-sekolah, ad-blocker, dll), maka `supabase` bernilai
-// undefined dan baris ini melempar error SEBELUM sempat mengisi
-// `supabaseClient`. Karena dideklarasikan dengan `const`, variabel ini sudah
-// "terdaftar" duluan di lingkup global (hoisting) tapi belum diinisialisasi
-// (temporal dead zone) — akibatnya SEMUA pengecekan `typeof supabaseClient
-// === 'undefined'` di app.js (yang seharusnya aman & menampilkan pesan error
-// yang ramah) ikut melempar ReferenceError "Cannot access 'supabaseClient'
-// before initialization". Efeknya: tombol "Otentikasi" & "Minta akses" di
-// menu login terlihat SAMA SEKALI tidak merespon saat diklik (errornya cuma
-// muncul diam-diam di console, sebelum sempat menampilkan pesan apa pun ke
-// layar). Dengan `let supabaseClient=null;` di luar try/catch, variabel ini
-// SELALU punya nilai (default null) walau inisialisasi gagal, sehingga
-// pengecekan `!supabaseClient` di app.js bekerja seperti mestinya dan pesan
-// "Koneksi ke Supabase gagal dimuat" benar-benar tampil ke pengguna.
-let supabaseClient=null;
-try{
-  supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-}catch(e){
-  console.error('Gagal membuat Supabase client — kemungkinan CDN Supabase gagal dimuat (cek koneksi internet / firewall):',e);
-}
+const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 // Nama-nama tabel relasional (lihat SETUP-DATABASE.sql)
 const TBL_KATEGORI='kategori';
