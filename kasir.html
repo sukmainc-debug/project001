@@ -18,45 +18,42 @@
 
     <div class="auth-avatar">
       <img id="login-logo-img" style="display:none">
-      <svg id="login-logo-fallback" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      <svg id="login-logo-fallback" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="7"/></svg>
     </div>
 
     <div class="auth-form-header" id="form-login-header">
-      <h1><em>Omni</em>Seller Access</h1>
-      <p>Otorisasi diperlukan untuk masuk dashboard</p>
+      <h1>Selamat Datang</h1>
+      <p>Masukkan detail akun Anda untuk masuk ke dashboard.</p>
     </div>
     <div class="auth-form-header" id="form-signup-header" style="display:none">
-      <h1>Daftar Akses Baru</h1>
-      <p>Buat akun administrator dashboard</p>
+      <h1>Buat Akun Baru</h1>
+      <p>Daftar sebagai administrator dashboard.</p>
     </div>
     <div id="login-alert"></div>
 
     <!-- FORM LOGIN -->
     <div id="form-login">
       <div class="auth-field">
-        <label>ID Pengguna (Email)</label>
-        <div class="auth-input-wrap has-hint">
-          <svg class="auth-input-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16v16H4z" opacity="0"/><path d="M22 6 12 13 2 6"/><path d="M2 6h20v12H2z"/></svg>
-          <input class="auth-input" type="email" id="login-email" placeholder="admin@tokoanda.com">
-          <span class="auth-input-hint" id="auth-id-tag">ID-••••</span>
+        <label>Email</label>
+        <div class="auth-input-wrap">
+          <input class="auth-input" type="email" id="login-email" placeholder="nama@tokoanda.com">
         </div>
       </div>
       <div class="auth-field">
-        <label>Kode Akses (Password)</label>
-        <div class="auth-input-wrap has-hint">
-          <svg class="auth-input-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        <label>Password</label>
+        <div class="auth-input-wrap">
           <input class="auth-input" type="password" id="login-password" placeholder="••••••••" onkeydown="if(event.key==='Enter')adminLogin()">
-          <span class="auth-input-hint">AES-256</span>
         </div>
       </div>
       <div class="auth-row-between">
-        <label class="auth-remember" title="Sesi login memang otomatis tersimpan di browser ini"><input type="checkbox" checked disabled> Ingat sesi ini</label>
-        <a href="javascript:void(0)" onclick="lupaKodeAkses()">Lupa kode akses?</a>
+        <label class="auth-remember" title="Sesi login memang otomatis tersimpan di browser ini"><input type="checkbox" checked disabled> Ingat saya</label>
+        <a href="javascript:void(0)" onclick="lupaKodeAkses()">Lupa password?</a>
       </div>
       <button class="auth-btn-primary" id="btn-login" onclick="adminLogin()">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px;margin-right:6px"><path d="M12 11a2 2 0 0 0-2 2c0 1.5-.5 3.5-1.5 5"/><path d="M8.5 3.5A9 9 0 0 1 21 8.5"/><path d="M4 8.5a9 9 0 0 1 2-5.5"/><path d="M2.5 12A9.5 9.5 0 0 0 4 17"/><path d="M12 8a4 4 0 0 1 4 4c0 2 .5 4 1.5 5.5"/><path d="M8 12a4 4 0 0 1 4-4"/><path d="M12 16c1 0 2-.5 2.5-1"/></svg>Otentikasi
+        Masuk
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg>
       </button>
-      <div class="auth-switch-text">Belum terdaftar? <a href="javascript:void(0)" onclick="toggleAuthForm('signup')">Minta akses</a></div>
+      <div class="auth-switch-text">Belum punya akun? <a href="javascript:void(0)" onclick="toggleAuthForm('signup')">Buat Akun</a></div>
     </div>
 
     <!-- FORM SIGN UP -->
@@ -64,35 +61,33 @@
       <div class="auth-field">
         <label>Nama Administrator</label>
         <div class="auth-input-wrap">
-          <svg class="auth-input-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
           <input class="auth-input" id="signup-nama" placeholder="Nama Anda">
         </div>
       </div>
       <div class="auth-field">
-        <label>ID Pengguna (Email)</label>
+        <label>Email</label>
         <div class="auth-input-wrap">
-          <svg class="auth-input-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 6 12 13 2 6"/><path d="M2 6h20v12H2z"/></svg>
           <input class="auth-input" type="email" id="signup-email" placeholder="admin-baru@tokoanda.com">
         </div>
       </div>
       <div class="auth-field">
-        <label>Kode Akses (Password)</label>
+        <label>Password</label>
         <div class="auth-input-wrap">
-          <svg class="auth-input-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
           <input class="auth-input" type="password" id="signup-password" placeholder="Minimal 6 karakter">
         </div>
       </div>
       <div class="auth-field">
-        <label>Ulangi Kode Akses</label>
+        <label>Ulangi Password</label>
         <div class="auth-input-wrap">
-          <svg class="auth-input-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
           <input class="auth-input" type="password" id="signup-password2" placeholder="Ulangi password" onkeydown="if(event.key==='Enter')adminSignUp()">
         </div>
       </div>
-      <button class="auth-btn-primary" id="btn-signup" onclick="adminSignUp()">Daftar Sebagai Administrator</button>
+      <button class="auth-btn-primary" id="btn-signup" onclick="adminSignUp()">
+        Daftar Sebagai Administrator
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg>
+      </button>
       <div class="auth-switch-text">Sudah punya akun? <a href="javascript:void(0)" onclick="toggleAuthForm('login')">Kembali ke Login</a></div>
     </div>
-
   </div>
 </div>
 
@@ -101,7 +96,7 @@
   <div class="auth-card">
     <div style="text-align:center">
       <div class="auth-pending-icon">⏳</div>
-      <h1 style="margin-bottom:8px;font-size:19px;letter-spacing:1px;color:#eaf6ff">Menunggu Persetujuan</h1>
+      <h1 style="margin-bottom:8px;font-size:22px;font-weight:600;letter-spacing:-.3px;color:#f3f7fd">Menunggu Persetujuan</h1>
       <p style="color:#8ba3c7;font-size:13px;line-height:1.7;margin-bottom:6px">
         Akun <strong id="pending-email" style="color:#eaf6ff"></strong> sudah berhasil terdaftar, tapi
         hak akses Anda belum diaktifkan oleh Owner/Administrator toko ini.
@@ -109,9 +104,11 @@
       <p style="color:#5b6a86;font-size:12px;margin-bottom:24px">
         Hubungi Owner untuk mengaktifkan akses Anda dari menu Pengaturan → Manajemen User.
       </p>
-      <button class="auth-btn-primary" style="background:rgba(255,255,255,.06);color:#eaf6ff;border:1px solid rgba(56,189,248,.25);box-shadow:none" onclick="adminLogout()">Keluar</button>
+      <button class="auth-btn-primary" style="background:rgba(255,255,255,.06);color:#eaf6ff;border:1px solid rgba(255,255,255,.12);box-shadow:none" onclick="adminLogout()">Keluar</button>
     </div>
   </div>
+</div>
+
 </div>
 
 <div id="app-wrap" style="display:none">
