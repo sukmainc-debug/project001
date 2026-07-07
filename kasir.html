@@ -404,11 +404,11 @@
     </div>
 
     <!-- LABA PER PRODUK -->
+    <!-- LABA PER PRODUK -->
     <div class="section" id="sec-laba">
       <div class="tab-pills">
         <div class="tab-pill active" onclick="switchLabaTab('ringkasan',this)">📊 Ringkasan Laba</div>
         <div class="tab-pill" onclick="switchLabaTab('pertabel',this)">📋 Detail per Produk</div>
-        <div class="tab-pill" onclick="switchLabaTab('biayaadmin',this)">⚙️ Pengaturan Biaya</div>
       </div>
 
       <!-- Ringkasan -->
@@ -461,40 +461,6 @@
             </table>
           </div>
           <div class="pagination" id="pag-laba"></div>
-        </div>
-      </div>
-
-      <!-- Pengaturan biaya -->
-      <div class="laba-sub" id="laba-biayaadmin">
-        <div class="info-box">💡 Biaya Admin (Rp) dan Biaya Tambahan (Rp) kini diisi langsung per pesanan di menu <strong>Penjualan</strong> (saat tambah/edit pesanan) — lebih akurat karena tiap marketplace & promo bisa beda potongan. Ringkasan rata-rata di bawah ini hanya untuk pemantauan, bukan input.</div>
-        <div class="grid-2 mb18">
-          <div class="card">
-            <div class="card-title">Biaya Admin &amp; Biaya Tambahan (dari data Penjualan)</div>
-            <div style="font-size:12px;color:var(--text3);margin-bottom:12px;line-height:1.7">Rata-rata biaya admin per marketplace dan rata-rata biaya tambahan per transaksi, dihitung otomatis dari pesanan yang sudah diinput. Untuk mengubahnya, edit langsung di menu Penjualan.</div>
-            <div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:10px">Rata-rata Biaya Admin per Marketplace</div>
-            <div class="hpp-grid" id="mp-fee-summary"></div>
-            <div style="margin-top:16px">
-              <div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:10px">Rata-rata Biaya Tambahan per Transaksi</div>
-              <div class="hpp-grid" id="extra-fee-summary"></div>
-            </div>
-            <button class="btn btn-sm" style="margin-top:14px" onclick="showSection('penjualan')">🧾 Buka Menu Penjualan</button>
-          </div>
-          <div class="card">
-            <div class="card-title">HPP (Harga Pokok Produksi)</div>
-            <div style="font-size:12px;color:var(--text3);margin-bottom:12px;line-height:1.7">Pilih mode perhitungan HPP. Mode % cocok untuk estimasi cepat. Mode per produk kini mengambil HPP otomatis dari data <strong>Stok & Gudang</strong> (diisi saat tambah/edit produk) — lebih akurat & tidak perlu input ulang di sini.</div>
-            <div class="form-group">
-              <label>Mode HPP</label>
-              <select class="form-input" id="hpp-mode" onchange="renderHppMode()">
-                <option value="pct">% Global dari omzet (estimasi)</option>
-                <option value="produk">Nominal Rp per produk (dari Stok Gudang)</option>
-              </select>
-            </div>
-            <div id="hpp-mode-content"></div>
-          </div>
-        </div>
-        <div style="display:flex;gap:10px;flex-wrap:wrap">
-          <button class="btn btn-primary" data-need="settings" onclick="simpanBiaya()">💾 Simpan Pengaturan HPP</button>
-          <button class="btn btn-sm" data-need="settings" onclick="resetBiaya()">↺ Reset Default</button>
         </div>
       </div>
     </div>
@@ -881,7 +847,7 @@
     <div class="form-group">
       <label>HPP (Harga Pokok Produksi) — Rp/pcs</label>
       <input class="form-input" type="number" id="s-hpp" placeholder="cth: 45000" value="0" min="0">
-      <div style="font-size:11px;color:var(--text3);margin-top:4px">Biaya pokok produksi/modal per pcs untuk produk-varian ini. Dipakai otomatis di laporan Laba & Biaya (mode "Nominal Rp per produk").</div>
+      <div style="font-size:11px;color:var(--text3);margin-top:4px">Biaya pokok produksi/modal per pcs untuk produk-varian ini. Dipakai otomatis untuk menghitung Laba per Produk (dibekukan per pesanan saat transaksi dibuat).</div>
     </div>
     <div class="modal-actions">
       <button class="btn" onclick="closeModal('modal-tambah-stok')">Batal</button>
