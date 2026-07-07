@@ -925,7 +925,7 @@ if(typeof supabaseClient!=='undefined'&&supabaseClient){
 }
 
 // ===== SECTIONS =====
-const PAGE_TITLES={dashboard:'Dashboard','dashboard-kasir':'Dashboard Kasir',penjualan:'Laporan Penjualan',stok:'Stok & Gudang',produk:'Produk & Kategori',laba:'Laba & Biaya Admin per Produk',inventory:'Inventory — Pembelian & Penggajian',laporan:'Laporan Keuangan',import:'Import Data',history:'History Aktivitas',pengaturan:'Pengaturan'};
+const PAGE_TITLES={dashboard:'Dashboard','dashboard-kasir':'Dashboard Kasir',penjualan:'Laporan Penjualan',stok:'Stok & Gudang',produk:'Produk & Kategori',laba:'Laba per Produk',inventory:'Inventory — Pembelian & Penggajian',laporan:'Laporan Keuangan',import:'Import Data',history:'History Aktivitas',pengaturan:'Pengaturan'};
 const MENU_IDS=Object.keys(PAGE_TITLES);
 let _currentSection=null;
 
@@ -986,7 +986,7 @@ function showSection(id,el){
   if(id==='laporan')renderLaporan();
   if(id==='dashboard-kasir')renderDashboardKasir();
   if(id==='produk')renderProduk();
-  if(id==='laba'){renderLabaSection();renderBiayaInputs();renderHppMode();}
+  if(id==='laba'){renderLabaSection();}
   if(id==='inventory'){filterPembelian();filterPenggajian();renderInventorySummary();}
   if(id==='pengaturan'){updateInfoPengaturan();if(canManageSettings())renderUserList();}
   if(id==='history')filterHistory();
@@ -2130,13 +2130,9 @@ function hitungLaba(r){
   let extra;
   if(r.biayaTambahan!=null){extra=r.biayaTambahan}
   else{extra=(biaya.extra.ongkir||0)+(biaya.extra.packaging||0)+(biaya.extra.lain||0)}
+  // ===== HPP: HANYA dari data Stok & Gudang (tidak ada lagi mode %) =====
   let hpp=0;
-  const hppPct=biaya.hpp_pct!=null?biaya.hpp_pct:45;
-  if(biaya.hpp_mode==='pct'){
-    // Mode % global: bukan HPP per-produk, jadi tetap ikuti pengaturan saat
-    // ini (di luar cakupan pembekuan HPP per transaksi).
-    hpp=hppPct/100*omzet;
-  }else if(r.hpp!=null){
+  if(r.hpp!=null){
     // ✅ PAKAI HPP YANG SUDAH DIBEKUKAN saat pesanan ini dibuat/diedit —
     // supaya laba pesanan lama TIDAK ikut berubah kalau HPP produk di Stok
     // Gudang naik/turun setelahnya. Ini nilai yang disimpan di kolom
@@ -2144,9 +2140,11 @@ function hitungLaba(r){
     hpp=r.hpp*(r.qty||1);
   }else{
     // Fallback HANYA untuk data lama yang dibuat sebelum fitur pembekuan HPP
-    // ini ada (belum punya snapshot) -> pakai HPP master saat ini seperti
-    // perilaku lama, sampai pesanan tsb diedit ulang dan snapshot terisi.
-    const ph=getHppDariStok(r.prod,r.varian);hpp=(ph!=null)?ph*(r.qty||1):hppPct/100*omzet;
+    // ini ada (belum punya snapshot) -> ambil HPP master Stok Gudang saat ini.
+    // Kalau produk/varian tidak ditemukan sama sekali di Stok Gudang, HPP
+    // dianggap Rp 0 (bukan estimasi %) — perbaiki data Stok Gudangnya, atau
+    // buka & simpan ulang pesanan ini supaya HPP-nya bisa dibekukan.
+    const ph=getHppDariStok(r.prod,r.varian);hpp=(ph!=null)?ph*(r.qty||1):0;
   }
   const laba=omzet-mpFee-extra-hpp;
   return{omzet,hpp,mpFee,extra,laba,margin:omzet>0?laba/omzet*100:0};
@@ -2170,7 +2168,6 @@ function switchLabaTab(tab,el){
   document.getElementById('laba-'+tab).classList.add('active');
   if(tab==='pertabel'){_labaData=getLabaPerProduk();_labaFiltered=[..._labaData];populateKatDropdowns();renderLabaTable()}
   if(tab==='ringkasan')renderLabaRingkasan();
-  if(tab==='biayaadmin'){renderBiayaInputs();renderHppMode()}
 }
 function renderLabaRingkasan(){
   const allOrders=DB.penjualan.filter(r=>r.status!=='Dibatalkan');
@@ -2293,57 +2290,10 @@ function renderLabaTable(){
   renderPagination('pag-laba',_labaFiltered.length,pageLaba,p=>{pageLaba=p;renderLabaTable()});
 }
 
-// ===== RINGKASAN BIAYA ADMIN & BIAYA TAMBAHAN (read-only) =====
-// Sumber data sekarang dari Penjualan (per pesanan), bukan input global lagi.
-function renderBiayaInputs(){
-  const aktif=DB.penjualan.filter(r=>r.status!=='Dibatalkan');
-  document.getElementById('mp-fee-summary').innerHTML=MP_LIST.map(m=>{
-    const data=aktif.filter(r=>r.mp===m&&r.biayaAdmin!=null&&r.total>0);
-    if(!data.length)return `<div class="hpp-item"><label>${m}</label><div style="font-size:13px;color:var(--text3)">Belum ada data</div></div>`;
-    const totalOmzet=data.reduce((a,r)=>a+r.total,0);const totalFee=data.reduce((a,r)=>a+r.biayaAdmin,0);
-    const pct=totalOmzet>0?totalFee/totalOmzet*100:0;
-    return `<div class="hpp-item"><label>${m}</label><div style="font-weight:600;font-size:14px">${fmtRp(totalFee/data.length)} <span style="font-weight:400;font-size:11px;color:var(--text3)">/transaksi (~${pct.toFixed(1)}%)</span></div></div>`;
-  }).join('');
-  const dataExtra=aktif.filter(r=>r.biayaTambahan!=null);
-  if(!dataExtra.length){
-    document.getElementById('extra-fee-summary').innerHTML=`<div class="hpp-item" style="grid-column:1/-1"><div style="font-size:13px;color:var(--text3)">Belum ada data biaya tambahan dari pesanan.</div></div>`;
-  }else{
-    const avgExtra=dataExtra.reduce((a,r)=>a+r.biayaTambahan,0)/dataExtra.length;
-    document.getElementById('extra-fee-summary').innerHTML=`<div class="hpp-item" style="grid-column:1/-1"><label>Rata-rata semua marketplace</label><div style="font-weight:600;font-size:14px">${fmtRp(avgExtra)} /transaksi</div></div>`;
-  }
-}
-function renderHppMode(){
-  const b=DB.biaya||DEFAULT_BIAYA;const mode=document.getElementById('hpp-mode').value||b.hpp_mode||'pct';
-  if(mode==='pct'){
-    document.getElementById('hpp-mode-content').innerHTML=`<div class="form-group"><label>HPP Global (% dari harga jual)</label><input class="form-input" type="number" step="1" id="hpp-pct-val" value="${b.hpp_pct!=null?b.hpp_pct:45}" max="100" min="0"><div style="font-size:11px;color:var(--text3);margin-top:4px">Contoh: nilai 45 berarti HPP = 45% dari harga jual</div></div>`;
-  } else {
-    // Mode "produk": HPP sekarang diambil otomatis dari data Stok & Gudang
-    // (kolom HPP di tiap produk-varian), bukan input manual di sini lagi.
-    const map={};
-    DB.stok.forEach(s=>{if(!map[s.prod])map[s.prod]=[];if(s.hpp!=null&&s.hpp>0)map[s.prod].push(s.hpp)});
-    const prodNames=Object.keys(map).sort();
-    if(!prodNames.length){
-      document.getElementById('hpp-mode-content').innerHTML=`<div class="info-box" style="margin-bottom:0">Belum ada data HPP. Isi kolom <strong>HPP (Harga Pokok Produksi)</strong> saat menambah/mengedit produk di menu <strong>Stok & Gudang</strong>.</div>`;
-      return;
-    }
-    document.getElementById('hpp-mode-content').innerHTML=`
-      <div style="font-size:11px;color:var(--text3);margin-bottom:10px">HPP per produk berikut diambil otomatis dari data Stok & Gudang (rata-rata jika produk punya beberapa varian dengan HPP berbeda). Untuk mengubahnya, edit di menu Stok & Gudang.</div>
-      <div class="hpp-grid">${prodNames.map(p=>{
-        const vals=map[p];const avg=vals.length?vals.reduce((a,v)=>a+v,0)/vals.length:0;
-        return `<div class="hpp-item"><label>${p}</label><div style="font-weight:600;font-size:14px">${vals.length?fmtRp(avg):'<span style="color:var(--text3);font-weight:400">Belum diisi</span>'}</div></div>`;
-      }).join('')}</div>
-      <button class="btn btn-sm" style="margin-top:14px" onclick="showSection('stok')">📦 Buka Stok & Gudang</button>`;
-  }
-}
-function simpanBiaya(){
-  if(!canManageSettings()){alert("Hanya Owner yang bisa mengubah pengaturan biaya.");return}
-  if(!DB.biaya)DB.biaya=JSON.parse(JSON.stringify(DEFAULT_BIAYA));
-  const b=DB.biaya;
-  b.hpp_mode=document.getElementById('hpp-mode').value||'pct';
-  if(b.hpp_mode==='pct'){const v=parseFloat(document.getElementById('hpp-pct-val').value);b.hpp_pct=isNaN(v)?45:v}
-  saveDB(['biaya','marketplace','stok']);catatAktivitas('Edit','Biaya & HPP','Mode: '+(b.hpp_mode==='pct'?'Persentase '+b.hpp_pct+'%':'Per Produk'));alert('✅ Pengaturan HPP disimpan! Laporan laba diperbarui.');renderLabaRingkasan();
-}
-function resetBiaya(){if(!canManageSettings()){alert("Hanya Owner yang bisa reset biaya.");return}if(confirm('Reset pengaturan HPP ke default?')){DB.biaya=JSON.parse(JSON.stringify(DEFAULT_BIAYA));saveDB(['biaya','marketplace','stok']);catatAktivitas('Reset','Biaya & HPP','Dikembalikan ke default');renderBiayaInputs();renderHppMode();alert('Pengaturan HPP direset.')}}
+// Catatan: dulu ada mode "% Global dari omzet" untuk estimasi HPP cepat.
+// Sekarang DIHAPUS — HPP selalu dihitung dari data Stok & Gudang (kolom HPP
+// per produk-varian) atau dari snapshot HPP per transaksi (hitungLaba()).
+// Kalau HPP sebuah produk berubah, cukup edit di menu Stok & Gudang.
 
 // ===== LAPORAN =====
 function renderLaporan(){
