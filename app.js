@@ -2802,7 +2802,7 @@ function processCSV(file,type){
   const reader=new FileReader();
   reader.onload=function(e){
     const lines=e.target.result.split(/\r?\n/).filter(l=>l.trim());
-    const headers=parseCSVLine(lines[0]).map(h=>h.trim().toLowerCase().replace(/\s+/g,'_'));
+    const headers=parseCSVLine(lines[0]).map(h=>h.trim().toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/^_+|_+$/g,''));
     let imported=0,errors=0;
     if(type==='jual'){
       // Kelompokkan baris-baris CSV berdasarkan No. Pesanan yang sama -> jadi
