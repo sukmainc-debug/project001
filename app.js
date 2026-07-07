@@ -1642,10 +1642,27 @@ function simpanPesanan(){
     const hpp=it.hpp!=null?it.hpp:hitungHppSnapshot(it.prod.trim(),(it.varian||'').trim(),it.qty||1,subtotal);
     return{prod:it.prod.trim(),varian:(it.varian||'').trim(),kat:it.kat||'Lainnya',qty:it.qty||1,harga:it.harga||0,subtotal,hpp};
   });
-  const r={no,tanggal:fmtTgl(new Date(tgl)),_date:new Date(tgl).toISOString(),mp:document.getElementById('f-mp').value,
+  const mpTerpilih=document.getElementById('f-mp').value;
+  const totalPesananIni=hitungTotalItems(items);
+  const adminRaw=(document.getElementById('f-biaya-admin').value||'').trim();
+  const tambahanRaw=(document.getElementById('f-biaya-tambahan').value||'').trim();
+  // PERBAIKAN PENTING (bug "laba bersih ke-inflate"): field yang DIKOSONGKAN
+  // bukan berarti Rp 0 -- itu berarti "biarkan sistem mengestimasi", persis
+  // seperti yang ditampilkan di preview Estimasi Laba. Sebelumnya kode di sini
+  // memakai `parseFloat('')||0`, sehingga kalau pengguna lupa isi/klik "Saran",
+  // Biaya Admin Marketplace tersimpan sebagai 0 -- padahal marketplace
+  // biasanya memotong 1.8%-4%, jadi laba bersih pesanan itu jadi tercatat
+  // terlalu besar. Kalau pengguna memang mengetik angka 0 secara eksplisit
+  // (mis. transaksi tanpa biaya admin), itu tetap dihormati sebagai 0.
+  // Estimasi dihitung & DIBEKUKAN di sini (bukan disimpan sebagai null),
+  // konsisten dengan cara HPP dibekukan, supaya tidak ikut berubah lagi kalau
+  // pengaturan % admin/biaya tambahan default diubah di kemudian hari.
+  const biayaAdminFinal=adminRaw!==''?(parseFloat(adminRaw)||0):Math.round(getSaranBiayaAdmin(mpTerpilih,totalPesananIni));
+  const biayaTambahanFinal=tambahanRaw!==''?(parseFloat(tambahanRaw)||0):Math.round(getSaranBiayaTambahan());
+  const r={no,tanggal:fmtTgl(new Date(tgl)),_date:new Date(tgl).toISOString(),mp:mpTerpilih,
     status:document.getElementById('f-status').value,
-    biayaAdmin:parseFloat(document.getElementById('f-biaya-admin').value)||0,
-    biayaTambahan:parseFloat(document.getElementById('f-biaya-tambahan').value)||0,
+    biayaAdmin:biayaAdminFinal,
+    biayaTambahan:biayaTambahanFinal,
     items};
   recalcOrderTotal(r);
   if(idx!==''&&idx>=0){
@@ -2912,6 +2929,14 @@ function processCSV(file,type){
         const orderBaru=grouped[key];
         if(!orderBaru.items.length)orderBaru.items=[{prod:'–',varian:'',kat:'Lainnya',qty:1,harga:0,subtotal:0}];
         recalcOrderTotal(orderBaru);
+        // Kalau file CSV tidak mengisi kolom biaya_admin/biaya_tambahan (nilainya
+        // null), bekukan estimasinya SEKARANG (bukan dibiarkan null selamanya) --
+        // konsisten dengan cara HPP & pesanan manual dibekukan, supaya laba
+        // pesanan hasil import ini tidak ikut berubah kalau pengaturan %
+        // admin/biaya tambahan default diubah nanti. Pengguna tetap bisa
+        // menimpanya manual lewat Edit Pesanan seperti biasa.
+        if(orderBaru.biayaAdmin==null)orderBaru.biayaAdmin=Math.round(getSaranBiayaAdmin(orderBaru.mp,orderBaru.total));
+        if(orderBaru.biayaTambahan==null)orderBaru.biayaTambahan=Math.round(getSaranBiayaTambahan());
         // Cegah No. Pesanan duplikat dengan data yang SUDAH ada sebelumnya di aplikasi
         // (yang menyebabkan gagal sinkron ke Supabase): timpa (update), jangan tambah baris baru.
         const idxAda=DB.penjualan.findIndex(r=>r.no.trim().toLowerCase()===key);
