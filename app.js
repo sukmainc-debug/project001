@@ -54,6 +54,10 @@ function flattenPenjualan(list){
         total:Number(it.subtotal)||0,
         biayaAdmin:r.biayaAdmin!=null?r.biayaAdmin*share:null,
         biayaTambahan:r.biayaTambahan!=null?r.biayaTambahan*share:null,
+        // HPP beku (snapshot) per barang, diisi saat pesanan disimpan (lihat
+        // hitungHppSnapshot()). Kalau null berarti data lama sebelum fitur ini
+        // ada -> hitungLaba() akan jatuh ke perhitungan dinamis seperti dulu.
+        hpp:it.hpp!=null?Number(it.hpp):null,
         _order:r
       });
     });
@@ -212,7 +216,12 @@ async function syncPenjualan_(){
       itemRows.push({
         pesanan_id:pid,produk:it.prod,varian:it.varian||'',kategori:it.kat||'Lainnya',
         qty:it.qty!=null?it.qty:1,harga_satuan:it.harga!=null?it.harga:0,
-        subtotal:it.subtotal!=null?it.subtotal:(it.qty||1)*(it.harga||0)
+        subtotal:it.subtotal!=null?it.subtotal:(it.qty||1)*(it.harga||0),
+        // HPP beku (snapshot) -- kolom ini sudah ada di skema tabel
+        // pesanan_item (hpp_saat_transaksi) tapi sebelumnya tidak pernah
+        // dipakai; sekarang diisi supaya laba transaksi lama tidak ikut
+        // berubah kalau HPP produk diubah di kemudian hari.
+        hpp_saat_transaksi:it.hpp!=null?it.hpp:null
       });
     });
   });
@@ -321,7 +330,7 @@ async function loadFromSupabase(){
     const itemsByPesanan={};
     (itemRes.data||[]).forEach(it=>{
       if(!itemsByPesanan[it.pesanan_id])itemsByPesanan[it.pesanan_id]=[];
-      itemsByPesanan[it.pesanan_id].push({prod:it.produk,varian:it.varian||'',kat:it.kategori||'Lainnya',qty:it.qty,harga:Number(it.harga_satuan)||0,subtotal:Number(it.subtotal)||0});
+      itemsByPesanan[it.pesanan_id].push({prod:it.produk,varian:it.varian||'',kat:it.kategori||'Lainnya',qty:it.qty,harga:Number(it.harga_satuan)||0,subtotal:Number(it.subtotal)||0,hpp:it.hpp_saat_transaksi!=null?Number(it.hpp_saat_transaksi):null});
     });
     const penjualan=(pesananRes.data||[]).map(r=>{
       const items=itemsByPesanan[r.id]||[];
@@ -1360,7 +1369,10 @@ function bukaEditJual(idx){
   document.getElementById('f-biaya-tambahan').value=r.biayaTambahan!=null?r.biayaTambahan:Math.round(getSaranBiayaTambahan());
   populateKatDropdowns();
   populateProdukDatalist();
-  _formItems=(r.items&&r.items.length?r.items:[{prod:'',varian:'',kat:'',qty:1,harga:0}]).map(it=>({prod:it.prod,varian:it.varian||'',kat:it.kat||'',qty:it.qty||1,harga:it.harga!=null?it.harga:(it.subtotal&&it.qty?Math.round(it.subtotal/it.qty):0)}));
+  // PENTING: bawa juga `hpp` (snapshot beku) dari data lama -> supaya kalau
+  // pesanan ini diedit & disimpan ulang, HPP historisnya TIDAK dihitung ulang
+  // dari harga HPP terkini (lihat hitungHppSnapshot() & simpanPesanan()).
+  _formItems=(r.items&&r.items.length?r.items:[{prod:'',varian:'',kat:'',qty:1,harga:0}]).map(it=>({prod:it.prod,varian:it.varian||'',kat:it.kat||'',qty:it.qty||1,harga:it.harga!=null?it.harga:(it.subtotal&&it.qty?Math.round(it.subtotal/it.qty):0),hpp:it.hpp!=null?it.hpp:null}));
   renderFormItems();
   openModal('modal-tambah-jual');
 }
@@ -1450,7 +1462,11 @@ function hitungLabaFormPesanan(){
   const mpEl=document.getElementById('f-mp');const mp=mpEl?mpEl.value:'';
   const adminRaw=(document.getElementById('f-biaya-admin').value||'').trim();
   const tambahanRaw=(document.getElementById('f-biaya-tambahan').value||'').trim();
-  const items=_formItems.map(it=>({prod:(it.prod||'').trim(),varian:(it.varian||'').trim(),kat:it.kat||'Lainnya',qty:it.qty||1,harga:it.harga||0,subtotal:(it.qty||0)*(it.harga||0)}));
+  // Sertakan `hpp` snapshot (kalau ada, mis. saat edit pesanan lama) supaya
+  // preview ini konsisten dengan hasil final setelah disimpan; untuk barang
+  // baru yang belum punya snapshot, hitungLaba() akan pakai estimasi HPP
+  // terkini sebagai preview (baru dibekukan betulan saat tombol Simpan ditekan).
+  const items=_formItems.map(it=>({prod:(it.prod||'').trim(),varian:(it.varian||'').trim(),kat:it.kat||'Lainnya',qty:it.qty||1,harga:it.harga||0,subtotal:(it.qty||0)*(it.harga||0),hpp:it.hpp!=null?it.hpp:null}));
   const tempOrder={mp,biayaAdmin:adminRaw!==''?(parseFloat(adminRaw)||0):null,biayaTambahan:tambahanRaw!==''?(parseFloat(tambahanRaw)||0):null,items};
   recalcOrderTotal(tempOrder);
   const laba=hitungLabaOrder(tempOrder);
@@ -1460,7 +1476,16 @@ function hitungLabaFormPesanan(){
 function updateFormLabaMargin(){
   const labaEl=document.getElementById('f-laba-display');const marginEl=document.getElementById('f-margin-display');
   if(!labaEl||!marginEl)return;
-  const{laba,margin}=hitungLabaFormPesanan();
+  const{laba,margin,omzet}=hitungLabaFormPesanan();
+  // Fix "estimasi laba" muncul duluan sebelum ada barang diinput: kalau omzet
+  // masih 0 (belum ada barang valid dengan qty & harga > 0), jangan tampilkan
+  // angka laba/margin sama sekali -- itu cuma proyeksi dari Biaya Tambahan
+  // default yang belum relevan sebelum ada transaksi sungguhan.
+  if(!omzet){
+    labaEl.textContent='–';labaEl.style.color='var(--text3)';
+    marginEl.textContent='–';marginEl.style.color='var(--text3)';
+    return;
+  }
   const warna=laba>=0?'var(--success)':'var(--danger)';
   const warnaMargin=margin>=20?'var(--success)':margin>=0?'var(--warning)':'var(--danger)';
   labaEl.textContent=fmtRp(laba);labaEl.style.color=warna;
@@ -1606,7 +1631,17 @@ function simpanPesanan(){
     const lanjut=confirm('⚠️ '+tanpaStok.length+' barang tidak ditemukan persis sama di Stok Gudang:\n'+tanpaStok.map(it=>'- '+it.prod+(it.varian?' - '+it.varian:'')).join('\n')+'\n\nStok TIDAK akan otomatis berkurang untuk barang tersebut.\n\nLanjutkan simpan? (Klik Batal untuk perbaiki nama produk/varian dulu)');
     if(!lanjut)return;
   }
-  const items=itemsValid.map(it=>({prod:it.prod.trim(),varian:(it.varian||'').trim(),kat:it.kat||'Lainnya',qty:it.qty||1,harga:it.harga||0,subtotal:(it.qty||1)*(it.harga||0)}));
+  // PENTING (snapshot HPP): kalau baris ini SUDAH punya HPP beku (mis. sedang
+  // edit pesanan lama), pertahankan apa adanya -- JANGAN dihitung ulang dari
+  // HPP/persentase yang berlaku sekarang. Hanya barang yang belum pernah
+  // punya snapshot (pesanan baru, atau baris baru yang ditambahkan saat edit)
+  // yang HPP-nya dihitung & dibekukan sekarang, lalu tidak akan berubah lagi
+  // walau HPP produk dinaikkan/diturunkan di kemudian hari.
+  const items=itemsValid.map(it=>{
+    const subtotal=(it.qty||1)*(it.harga||0);
+    const hpp=it.hpp!=null?it.hpp:hitungHppSnapshot(it.prod.trim(),(it.varian||'').trim(),it.qty||1,subtotal);
+    return{prod:it.prod.trim(),varian:(it.varian||'').trim(),kat:it.kat||'Lainnya',qty:it.qty||1,harga:it.harga||0,subtotal,hpp};
+  });
   const r={no,tanggal:fmtTgl(new Date(tgl)),_date:new Date(tgl).toISOString(),mp:document.getElementById('f-mp').value,
     status:document.getElementById('f-status').value,
     biayaAdmin:parseFloat(document.getElementById('f-biaya-admin').value)||0,
@@ -2102,10 +2137,37 @@ function hitungLaba(r){
   else{extra=(biaya.extra.ongkir||0)+(biaya.extra.packaging||0)+(biaya.extra.lain||0)}
   let hpp=0;
   const hppPct=biaya.hpp_pct!=null?biaya.hpp_pct:45;
-  if(biaya.hpp_mode==='pct')hpp=hppPct/100*omzet;
-  else{const ph=getHppDariStok(r.prod,r.varian);hpp=(ph!=null)?ph*(r.qty||1):hppPct/100*omzet}
+  // PENTING (fix "HPP berubah, laba lama ikut berubah"): kalau barisnya sudah
+  // punya HPP beku (snapshot diambil & dikunci saat pesanan itu disimpan —
+  // lihat hitungHppSnapshot() & simpanPesanan()), PAKAI itu apa adanya. Jangan
+  // hitung ulang dari harga HPP/persentase yang berlaku SEKARANG, supaya
+  // kenaikan/penurunan HPP di masa depan tidak mengubah laba transaksi lama.
+  // Hanya jatuh ke perhitungan dinamis (harga HPP terkini) kalau barisnya
+  // belum punya snapshot sama sekali — ini terjadi untuk data lama yang
+  // dibuat sebelum fitur ini ada (r.hpp==null).
+  if(r.hpp!=null){
+    hpp=r.hpp;
+  }else if(biaya.hpp_mode==='pct'){
+    hpp=hppPct/100*omzet;
+  }else{
+    const ph=getHppDariStok(r.prod,r.varian);hpp=(ph!=null)?ph*(r.qty||1):hppPct/100*omzet;
+  }
   const laba=omzet-mpFee-extra-hpp;
   return{omzet,hpp,mpFee,extra,laba,margin:omzet>0?laba/omzet*100:0};
+}
+
+// Hitung & KUNCI nilai HPP satu barang pada saat pesanan disimpan (dipanggil
+// dari simpanPesanan() untuk barang yang belum punya snapshot). Sumbernya
+// sama seperti perhitungan dinamis lama (HPP dari Stok & Gudang, atau %
+// global kalau modenya persentase) -- bedanya, hasil hitungan ini DIBEKUKAN
+// ke dalam data pesanan (kolom hpp_saat_transaksi di Supabase) dan tidak akan
+// ikut berubah lagi walau HPP produk atau % global diubah kemudian hari.
+function hitungHppSnapshot(prod,varian,qty,subtotal){
+  const biaya=DB.biaya||DEFAULT_BIAYA;
+  const hppPct=biaya.hpp_pct!=null?biaya.hpp_pct:45;
+  if(biaya.hpp_mode==='pct')return hppPct/100*(subtotal||0);
+  const ph=getHppDariStok(prod,varian);
+  return ph!=null?ph*(qty||1):hppPct/100*(subtotal||0);
 }
 
 function getLabaPerProduk(filterMP,filterKat){
@@ -2837,7 +2899,11 @@ function processCSV(file,type){
           if(harga==null)harga=subtotal!=null&&qty>0?Math.round(subtotal/qty):0;
           if(subtotal==null)subtotal=qty*harga;
           if((row.produk||'').trim()){
-            grouped[key].items.push({prod:row.produk.trim(),varian:(row.varian||'').trim(),kat:row.kategori||'Lainnya',qty,harga,subtotal});
+            // Bekukan HPP saat import juga, supaya data hasil import konsisten
+            // dengan pesanan yang diinput manual -- tidak ikut berubah kalau
+            // HPP produk diubah setelah file CSV ini diimpor.
+            const prodTrim=row.produk.trim(),varTrim=(row.varian||'').trim();
+            grouped[key].items.push({prod:prodTrim,varian:varTrim,kat:row.kategori||'Lainnya',qty,harga,subtotal,hpp:hitungHppSnapshot(prodTrim,varTrim,qty,subtotal)});
           }
           imported++;
         }catch(err){errors++}
