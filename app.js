@@ -17,6 +17,20 @@ let pageJual=1,pageStok=1,pageLaba=1,pagePembelian=1,pagePenggajian=1;
 let _invTab='pembelian';
 const PER_PAGE=20;
 let charts={};
+
+// ===== MODE CETAK: pastikan SEMUA chart Chart.js ikut tampil penuh saat print =====
+// Chart.js (responsive:true) hanya resize otomatis lewat ResizeObserver saat
+// ukuran kontainer berubah di LAYAR. Perubahan layout dari @media print
+// (grid 2 kolom -> 1 kolom, tinggi .chart-box berubah) tidak memicu event
+// itu, sehingga tanpa perbaikan ini chart akan tampil terpotong/blank/kosong
+// di hasil cetak/PDF walau kartunya sendiri tetap muncul. `beforeprint`
+// dipakai untuk memaksa semua chart menyesuaikan ukuran barunya SEBELUM
+// browser merender halaman cetak, dan `afterprint` mengembalikannya ke
+// ukuran layar semula setelah selesai.
+function resizeAllCharts(){Object.values(charts).forEach(c=>{if(c&&typeof c.resize==='function'){try{c.resize()}catch(e){}}})}
+window.addEventListener('beforeprint',function(){resizeAllCharts();setTimeout(resizeAllCharts,50)});
+window.addEventListener('afterprint',function(){setTimeout(resizeAllCharts,50)});
+
 let _selectedKatColor=KAT_COLORS[0];
 let _selectedMpColor=MP_COLOR_CHOICES[0];
 
