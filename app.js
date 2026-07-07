@@ -1430,10 +1430,27 @@ function tambahBarisItem(){_formItems.push({prod:'',varian:'',kat:'',qty:1,harga
 function hapusBarisItem(i){if(_formItems.length<=1){alert('Pesanan harus punya minimal 1 barang.');return}_formItems.splice(i,1);renderFormItems()}
 function updateBarisItem(i,field,val){
   const it=_formItems[i];if(!it)return;
-  if(field==='qty')it.qty=Math.max(1,parseInt(val)||1);
-  else if(field==='harga')it.harga=Math.max(0,parseFloat(val)||0);
+  if(field==='qty'){
+    it.qty=Math.max(1,parseInt(val)||1);
+    // Qty barang ini berubah -> HPP beku (snapshot) lama (dihitung utk qty
+    // SEBELUMNYA) sudah tidak relevan. Kosongkan supaya dihitung ulang &
+    // dibekukan lagi dgn qty yang benar saat pesanan disimpan.
+    it.hpp=null;
+  }
+  else if(field==='harga'){
+    it.harga=Math.max(0,parseFloat(val)||0);
+    // Kalau mode HPP = % dari harga jual, HPP ikut bergantung ke harga jual
+    // -> harus dihitung ulang juga kalau harga berubah. Mode "per produk"
+    // tidak bergantung ke harga jual, jadi snapshot lama masih valid & tidak
+    // perlu direset.
+    if((DB.biaya&&DB.biaya.hpp_mode)==='pct')it.hpp=null;
+  }
   else it[field]=val;
   if(field==='prod'||field==='varian'){
+    // Produk/varian barang ini berubah -> HPP beku lama (milik produk yang
+    // BERBEDA) sudah tidak relevan sama sekali. Kosongkan supaya dihitung
+    // ulang dari data Stok & Gudang produk yang baru saat pesanan disimpan.
+    it.hpp=null;
     // Sinkron kategori otomatis: coba cocok PERSIS (produk+varian) dulu;
     // kalau varian belum diisi/tidak cocok, tetap coba cocokkan dari nama
     // produk saja (kategori varian pertama yang ditemukan) supaya kategori
