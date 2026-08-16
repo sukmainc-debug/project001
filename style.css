@@ -629,6 +629,8 @@ a:focus-visible,button:focus-visible,.btn:focus-visible,.nav-item:focus-visible,
 /* Kop & footer halaman untuk file cetak — tersembunyi di layar, muncul saat print */
 .fin-print-header{display:none}
 .fin-print-footer{display:none}
+.fin-statement-print{display:none}
+.print-only{display:none}
 
 /* =========================================================
    MODE CETAK — dipicu tombol "🖨 Cetak Laporan" (window.print()).
@@ -638,30 +640,64 @@ a:focus-visible,button:focus-visible,.btn:focus-visible,.nav-item:focus-visible,
    aksen warna secukupnya untuk kesan modern di kertas.
    ========================================================= */
 @media print{
-  @page{margin:14mm}
-  body{background:#fff!important}
+  @page{margin:14mm;size:A4}
+  html,body{background:#fff!important}
+  body{font-family:'Segoe UI',Arial,Helvetica,sans-serif;-webkit-print-color-adjust:exact;print-color-adjust:exact;color:#1a1a1a!important}
   .sidebar,.topbar,.no-print,#login-screen,.modal-overlay,.toast-container{display:none!important}
   .main{margin-left:0!important}
   .page-content{padding:0!important;max-width:100%!important}
   .section{display:none!important}
   .section.active{display:block!important}
-  .card{box-shadow:none!important;border:1px solid #ddd!important;break-inside:avoid;page-break-inside:avoid;margin-bottom:12px!important}
-  .fin-metric{break-inside:avoid;box-shadow:none!important}
+  .card{box-shadow:none!important;border:1px solid #ddd!important;break-inside:avoid;page-break-inside:avoid;margin-bottom:12px!important;background:#fff!important}
+  .fin-metric{break-inside:avoid;box-shadow:none!important;background:#fafafa!important}
+  .fin-metric-icon{background:transparent!important;font-size:16px}
+  .fin-metric-value{color:#111!important}
   .fin-print-header{
     display:flex!important;align-items:center;justify-content:space-between;
-    padding-bottom:14px;margin-bottom:16px;border-bottom:2.5px solid var(--accent-dark);
+    padding-bottom:14px;margin-bottom:18px;border-bottom:2.5px solid #1a1a2e;
   }
   .fin-print-brand{display:flex;align-items:center;gap:10px}
   .fin-print-brand img{width:36px;height:36px;border-radius:9px;object-fit:cover}
-  .fin-print-toko{font-size:16px;font-weight:800;color:#111}
-  .fin-print-sub{font-size:11px;color:#666;font-weight:600;margin-top:2px}
+  .fin-print-toko{font-size:17px;font-weight:800;color:#111;letter-spacing:-.2px}
+  .fin-print-sub{font-size:11px;color:#666;font-weight:600;margin-top:2px;letter-spacing:.02em}
   .fin-print-meta{text-align:right;font-size:11px;color:#444;font-weight:600;line-height:1.7}
+
+  /* ===== LAPORAN LABA RUGI (tabel format akuntansi) ===== */
+  .fin-statement-print{
+    display:block!important;break-inside:avoid;page-break-inside:avoid;
+    margin-bottom:20px;border:1px solid #ccc;border-radius:6px;padding:16px 18px;background:#fff!important;
+  }
+  .fin-stmt-title{font-size:13px;font-weight:800;letter-spacing:.06em;color:#111;margin-bottom:2px}
+  .fin-stmt-period{font-size:10.5px;color:#777;margin-bottom:10px;font-weight:600}
+  .fin-stmt-table{width:100%;border-collapse:collapse;font-size:12px}
+  .fin-stmt-table td{padding:5px 2px;color:#222}
+  .fin-stmt-table .fin-stmt-label{text-align:left}
+  .fin-stmt-table .fin-stmt-val{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap;width:150px}
+  .fin-stmt-table tr.fin-stmt-section td{
+    padding-top:10px;font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;
+    color:#666;border-bottom:1px solid #eee;padding-bottom:4px;
+  }
+  .fin-stmt-table tr.fin-stmt-subtotal td{border-top:1px solid #999;font-weight:700;padding-top:7px}
+  .fin-stmt-table tr.fin-stmt-total td{
+    border-top:2px solid #111;border-bottom:2px double #111;font-weight:800;font-size:13.5px;
+    padding-top:9px;padding-bottom:9px;color:#111;
+  }
+  .fin-stmt-table tr.fin-stmt-margin td{font-size:10.5px;color:#666;font-style:italic;padding-top:4px}
+
+  /* ===== Tabel mini pendamping chart (Revenue per Marketplace / Nilai Aset per Kategori) ===== */
+  .print-only{display:block!important}
+  .fin-print-table-wrap{margin-top:10px;padding-top:10px;border-top:1px dashed #ddd}
+  .fin-mini-table{width:100%;border-collapse:collapse;font-size:10.5px}
+  .fin-mini-table th{text-align:left;font-size:9.5px;text-transform:uppercase;letter-spacing:.04em;color:#888;font-weight:700;padding:4px 3px;border-bottom:1px solid #999}
+  .fin-mini-table td{padding:4px 3px;border-bottom:1px solid #eee;color:#222}
+  .fin-mini-table tr.fin-mini-total td{border-top:1.5px solid #999;border-bottom:none;font-weight:800;padding-top:6px}
+
   /* Grid 2 kolom diubah jadi 1 kolom saat dicetak — chart jauh lebih
      terbaca di kertas kalau full-width daripada berdempetan 2 kolom sempit. */
   .grid-2{grid-template-columns:1fr!important;gap:12px!important}
   .fin-metric-grid{gap:10px!important}
-  .card-title{font-size:13px!important;margin-bottom:10px!important}
-  .chart-box{height:200px!important;break-inside:avoid;page-break-inside:avoid}
+  .card-title{font-size:12.5px!important;margin-bottom:10px!important;font-weight:800!important;color:#111!important;text-transform:uppercase;letter-spacing:.03em}
+  .chart-box{height:190px!important;break-inside:avoid;page-break-inside:avoid}
   canvas{max-width:100%!important}
   /* Footer cetak: disclaimer + kolom tanda tangan, cuma muncul di kertas */
   .fin-print-footer{
@@ -673,6 +709,7 @@ a:focus-visible,button:focus-visible,.btn:focus-visible,.nav-item:focus-visible,
   .fin-print-sign-box{flex:1;text-align:center;font-size:11px;color:#444}
   .fin-print-sign-line{border-top:1px solid #999;margin-bottom:6px;height:46px}
 }
+
 
 /* Sembunyikan data Laba/Margin di menu Penjualan khusus untuk role Kasir
    (lihat applyNavVisibility() di app.js yang menambahkan class ini ke
