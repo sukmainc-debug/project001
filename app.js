@@ -159,16 +159,31 @@ function syncToSupabase(tables){
   clearTimeout(_syncTimeout);
   _syncTimeout=setTimeout(async()=>{
     const todo=[..._pendingTables];_pendingTables.clear();
-    try{
-      await Promise.all(todo.map(t=>SYNC_FN[t]&&SYNC_FN[t]()));
+    _syncTimeout=null; // PENTING: direset ke null di sini (dulu TIDAK PERNAH direset
+    // setelah timer menyala, jadi status "ada sinkron tertunda" selalu terbaca true
+    // selamanya setelah sinkron pertama -> fitur auto-refresh saat tab aktif kembali
+    // jadi tidak pernah benar-benar jalan).
+    // PENTING: pakai allSettled, BUKAN Promise.all -- supaya satu tabel yang gagal
+    // (mis. RLS menolak tabel tertentu untuk role tertentu) TIDAK membuat tabel
+    // LAIN yang sebenarnya berhasil ikut dilaporkan gagal / bikin alert
+    // membingungkan padahal pesanan yang baru diinput sebenarnya sudah tersimpan.
+    const hasil=await Promise.allSettled(todo.map(t=>SYNC_FN[t]?SYNC_FN[t]():Promise.resolve()));
+    const gagal=[];
+    hasil.forEach((h,i)=>{if(h.status==='rejected'){gagal.push(todo[i]);console.warn('Gagal sinkron tabel',todo[i],':',h.reason)}});
+    if(gagal.length){
+      // Tabel yang gagal dimasukkan lagi ke antrean supaya dicoba ulang di
+      // sinkronisasi berikutnya (bukan hilang begitu saja).
+      gagal.forEach(t=>_pendingTables.add(t));
+      updateSyncBadge(false,gagal.join(', '));
+      const namaTabel={penjualan:'Data Pesanan',stok:'Stok Gudang',kategori:'Kategori',marketplace:'Marketplace',biaya:'Pengaturan Biaya',hpp_produk:'HPP per Produk',pengaturan:'Pengaturan Toko',pembelian:'Pembelian',penggajian:'Penggajian'};
+      const daftar=gagal.map(t=>namaTabel[t]||t).join(', ');
+      alert('⚠️ Sebagian perubahan BELUM tersimpan ke server (Supabase): '+daftar+'.\n\nData Anda tetap aman di perangkat ini dan akan dicoba kirim ulang otomatis. Penyebab paling umum: akun Anda tidak punya izin menulis ke data tersebut (hubungi Owner), atau ada No. Pesanan/SKU yang sama dipakai dua kali.');
+      // Coba lagi otomatis 20 detik kemudian (mis. kalau sebabnya cuma
+      // koneksi lag sesaat) -- tanpa perlu user mengedit apa pun lagi supaya
+      // memicu sinkron ulang.
+      setTimeout(()=>{if(gagal.some(t=>_pendingTables.has(t)))syncToSupabase(gagal)},20000);
+    }else{
       updateSyncBadge(true);
-    }catch(e){
-      console.warn('Supabase sync error:',e);
-      updateSyncBadge(false,e.message);
-      // Data lokal (localStorage) tetap aman (lihat catatan di safeReplace()),
-      // tapi user perlu tahu perubahan terakhir BELUM tersimpan ke server,
-      // supaya tidak menutup browser dalam keadaan itu.
-      alert('⚠️ Gagal menyimpan perubahan ke server (Supabase).\n\nData Anda masih aman tersimpan di browser ini, tapi BELUM tersinkron ke cloud. Penyebab umum: ada No. Pesanan / SKU yang sama dipakai dua kali.\n\nDetail: '+e.message+'\n\nPerbaiki data yang bentrok lalu coba simpan lagi.');
     }
   },700);
 }
@@ -263,9 +278,9 @@ async function syncPenjualan_(){
   // tidak disentuh di tab ini tidak pernah ikut tertimpa oleh salinan lokal
   // yang mungkin sudah basi (lihat catatan _dirtyPesananNo di atas).
   if(_fullResyncPenjualan){
-    _fullResyncPenjualan=false;_dirtyPesananNo.clear();_deletedPesananNo.clear();
     const headerRows=DB.penjualan.map(_pesananHeaderRow);
     await safeReplace(TBL_PESANAN, headerRows, 'no_pesanan');
+    _fullResyncPenjualan=false;_dirtyPesananNo.clear();_deletedPesananNo.clear(); // baru direset SETELAH berhasil
     if(!DB.penjualan.length)return;
     const{data:idMap,error:idErr}=await supabaseClient.from(TBL_PESANAN).select('id,no_pesanan');
     if(idErr)throw idErr;
@@ -281,8 +296,15 @@ async function syncPenjualan_(){
   // dalam salinan lokal (DB.penjualan) TIDAK disertakan sama sekali dalam
   // permintaan ke server, jadi tidak mungkin menimpa perubahan pesanan lain
   // yang dibuat dari tab/perangkat lain sejak tab ini terakhir memuat data.
+  //
+  // PENTING: penanda dirty/deleted BARU dihapus dari Set GLOBAL setelah
+  // proses di bawah benar-benar SELESAI TANPA ERROR (bukan di awal seperti
+  // sebelumnya). Kalau salah satu langkah di bawah gagal (mis. ditolak RLS
+  // untuk role tertentu), pesanan yang gagal tadi TETAP tercatat dirty,
+  // sehingga percobaan sinkron berikutnya (lihat retry di syncToSupabase)
+  // masih tahu pesanan mana yang perlu dikirim ulang -- bukan diam-diam
+  // dianggap "selesai" padahal sebenarnya belum pernah berhasil tersimpan.
   const dirtyNo=[..._dirtyPesananNo];const deletedNo=[..._deletedPesananNo];
-  _dirtyPesananNo.clear();_deletedPesananNo.clear();
   if(!dirtyNo.length&&!deletedNo.length)return;
 
   const dirtyOrders=dirtyNo.map(no=>DB.penjualan.find(r=>r.no===no)).filter(Boolean);
@@ -292,8 +314,9 @@ async function syncPenjualan_(){
   if(deletedNo.length){
     const{error:delHdrErr}=await supabaseClient.from(TBL_PESANAN).delete().in('no_pesanan',deletedNo);
     if(delHdrErr)throw delHdrErr;
+    deletedNo.forEach(no=>_deletedPesananNo.delete(no));
   }
-  if(!dirtyOrders.length)return;
+  if(!dirtyOrders.length){dirtyNo.forEach(no=>_dirtyPesananNo.delete(no));return}
 
   // 2) Upsert HANYA header pesanan yang berubah (bukan seluruh tabel).
   const headerRows=dirtyOrders.map(_pesananHeaderRow);
@@ -308,6 +331,8 @@ async function syncPenjualan_(){
   const itemRows=[];
   dirtyOrders.forEach(r=>{const pid=idByNo[r.no];if(pid==null)return;itemRows.push(..._pesananItemRows(pid,r))});
   await _replaceItemsForPesananIds_(Object.values(idByNo),itemRows);
+  // Semua langkah berhasil -> baru sekarang aman menghapus penanda dirty ini.
+  dirtyNo.forEach(no=>_dirtyPesananNo.delete(no));
 }
 async function syncBiayaPengaturan_(){
   const b=DB.biaya||{};const ex=b.extra||{};
