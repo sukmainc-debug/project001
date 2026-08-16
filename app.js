@@ -1398,6 +1398,17 @@ function renderAsetStokChart(){
   setTxt('aset-varian',totalVarian.toLocaleString('id-ID'));
   setTxt('aset-qty',totalQty.toLocaleString('id-ID')+' pcs');
   setTxt('aset-kritis',kritis.toLocaleString('id-ID'));
+
+  // Tabel angka pasti pendamping chart "Nilai Aset per Kategori" — HANYA
+  // tampil saat dicetak (sama alasannya dengan tabel per-marketplace di atas).
+  const asetTableEl=document.getElementById('fin-print-aset-table');
+  if(asetTableEl){
+    asetTableEl.innerHTML=entries.length?`<table class="fin-mini-table">
+      <thead><tr><th>Kategori</th><th style="text-align:right">Nilai Aset</th><th style="text-align:right">%</th></tr></thead>
+      <tbody>${entries.map(([k,v])=>`<tr><td>${k}</td><td style="text-align:right">${fmtRp(v)}</td><td style="text-align:right">${totalAset>0?(v/totalAset*100).toFixed(1):0}%</td></tr>`).join('')}
+      <tr class="fin-mini-total"><td>Total</td><td style="text-align:right">${fmtRp(totalAset)}</td><td style="text-align:right">100%</td></tr></tbody>
+    </table>`:'<div style="font-size:11px;color:#888">Belum ada data stok.</div>';
+  }
 }
 
 // ===== PENJUALAN TABLE =====
@@ -2471,6 +2482,41 @@ function renderLaporan(){
       </div>`).join('');
   }
 
+  // ===== LAPORAN LABA RUGI (tabel format akuntansi, khusus tampilan cetak) =====
+  // Disusun berjenjang seperti laporan laba-rugi baku: Pendapatan -> HPP ->
+  // Laba Kotor -> rincian Biaya Operasional -> Laba Bersih. Baris subtotal &
+  // total diberi garis pemisah lewat class 'fin-stmt-subtotal'/'fin-stmt-total'
+  // (lihat style.css) supaya terlihat seperti dokumen akuntansi asli saat dicetak.
+  const stmtEl=document.getElementById('fin-statement-print');
+  if(stmtEl){
+    const labaKotor=to-th;
+    const baris=(label,val,opt)=>{
+      opt=opt||{};
+      return `<tr class="${opt.cls||''}">
+        <td class="fin-stmt-label" style="${opt.indent?'padding-left:22px':''}">${label}</td>
+        <td class="fin-stmt-val">${opt.neg?'(':''}${fmtRp(Math.abs(val))}${opt.neg?')':''}</td>
+      </tr>`;
+    };
+    stmtEl.innerHTML=`
+      <div class="fin-stmt-title">LAPORAN LABA RUGI</div>
+      <div class="fin-stmt-period">Periode: ${label}</div>
+      <table class="fin-stmt-table">
+        <tbody>
+          ${baris('Pendapatan (Total Omzet Penjualan)',to)}
+          ${baris('Harga Pokok Penjualan (HPP)',th,{neg:true,indent:true})}
+          ${baris('LABA KOTOR',labaKotor,{cls:'fin-stmt-subtotal'})}
+          <tr class="fin-stmt-section"><td colspan="2">Biaya Operasional</td></tr>
+          ${baris('Biaya Admin Marketplace',tf,{neg:true,indent:true})}
+          ${baris('Ongkir & Biaya Lain-lain',te,{neg:true,indent:true})}
+          ${baris('Pembelian Barang/Bahan (Supplier)',totalBeliOpex,{neg:true,indent:true})}
+          ${baris('Penggajian Karyawan/Staf',totalGajiOpex,{neg:true,indent:true})}
+          ${baris('Total Biaya Operasional',tf+te+totalOpex,{cls:'fin-stmt-subtotal'})}
+          ${baris('LABA BERSIH',tl,{cls:'fin-stmt-total'})}
+          <tr class="fin-stmt-margin"><td class="fin-stmt-label">Margin Bersih</td><td class="fin-stmt-val">${margin.toFixed(1)}%</td></tr>
+        </tbody>
+      </table>`;
+  }
+
   // Donut komposisi biaya (HPP / Admin MP / Ongkir & Lain) — cerminan dari
   // total yang sama persis dengan kartu di atas, dihitung dari data yang
   // sudah difilter sesuai periode terpilih.
@@ -2486,6 +2532,20 @@ function renderLaporan(){
   if(charts.mpBar)charts.mpBar.destroy();
   const mpRev={};MP_LIST.forEach(m=>mpRev[m]=0);dalamRentang.forEach(r=>mpRev[r.mp]=(mpRev[r.mp]||0)+(r.total||0));
   charts.mpBar=new Chart(document.getElementById('chartMpBar'),{type:'bar',data:{labels:MP_LIST,datasets:[{label:'Revenue',data:MP_LIST.map(m=>Math.round(mpRev[m]/1e6*10)/10),backgroundColor:MP_LIST.map(m=>getMpColor(m)),borderWidth:0,borderRadius:5}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#888',font:{size:11}},grid:{display:false}},y:{ticks:{color:'#888',font:{size:10},callback:v=>'Rp'+v+'jt'},grid:{color:'rgba(128,128,128,.1)'}}}}});
+
+  // Tabel angka pasti pendamping chart "Revenue per Marketplace" — HANYA
+  // tampil saat dicetak (class 'print-only', lihat style.css). Chart batang
+  // enak dilihat di layar, tapi di kertas nilai pastinya sulit dibaca persis
+  // dari tinggi batang; tabel ini memastikan laporan cetak tetap presisi.
+  const mpTableEl=document.getElementById('fin-print-mp-table');
+  if(mpTableEl){
+    const mpSorted=MP_LIST.map(m=>({m,v:mpRev[m]||0})).filter(x=>x.v>0).sort((a,b)=>b.v-a.v);
+    mpTableEl.innerHTML=mpSorted.length?`<table class="fin-mini-table">
+      <thead><tr><th>Marketplace</th><th style="text-align:right">Revenue</th><th style="text-align:right">%</th></tr></thead>
+      <tbody>${mpSorted.map(x=>`<tr><td>${x.m}</td><td style="text-align:right">${fmtRp(x.v)}</td><td style="text-align:right">${to>0?(x.v/to*100).toFixed(1):0}%</td></tr>`).join('')}
+      <tr class="fin-mini-total"><td>Total</td><td style="text-align:right">${fmtRp(to)}</td><td style="text-align:right">100%</td></tr></tbody>
+    </table>`:'<div style="font-size:11px;color:#888">Tidak ada data di periode ini.</div>';
+  }
 
   renderAsetStokChart();
   renderTrenOmzetChart(start,end);
