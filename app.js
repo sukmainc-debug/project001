@@ -1528,6 +1528,26 @@ function saranBiayaTambahanPesanan(){
   document.getElementById('f-biaya-tambahan').value=Math.round(getSaranBiayaTambahan());
   updateFormLabaMargin();
 }
+// ===== CETAK LAPORAN KEUANGAN =====
+// Sebagian besar browser menampilkan header/footer bawaannya sendiri saat
+// mencetak (tanggal, URL, JUDUL TAB, nomor halaman) — ini pengaturan
+// dialog cetak browser, TIDAK BISA dimatikan lewat CSS dari sisi web manapun.
+// Yang bisa kita kendalikan: (1) judul tab saat tombol Cetak ditekan, supaya
+// KALAU user tidak mematikan header bawaan itu, minimal judulnya relevan
+// ("Nama Toko — Laporan Keuangan — Periode") bukan "OmniSeller — Dashboard
+// Penjualan & Stok" yang generik; (2) mengingatkan user lewat tip di layar
+// (lihat #print-tip di HTML, class no-print) untuk mematikan opsi "Header
+// dan footer" pada dialog cetak supaya hasilnya betul-betul bersih.
+let _judulAsli=null;
+function cetakLaporanKeuangan(){
+  const{label}=ppGetRange('pp-laporan');
+  const toko=(DB.pengaturan&&DB.pengaturan.nama)||'Toko Saya';
+  _judulAsli=document.title;
+  document.title=`${toko} — Laporan Keuangan — ${label}`;
+  const kembalikanJudul=()=>{document.title=_judulAsli||document.title;window.removeEventListener('afterprint',kembalikanJudul)};
+  window.addEventListener('afterprint',kembalikanJudul);
+  window.print();
+}
 function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 function escAttr(s){return esc(s).replace(/`/g,'&#96;')}
 
