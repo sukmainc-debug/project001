@@ -341,12 +341,19 @@ begin
   end loop;
 end $$;
 
--- Tabel operasional lain (stok, kategori, marketplace, hpp_per_produk):
--- kasir HANYA boleh lihat, tidak boleh ubah
+-- Tabel operasional lain (kategori, marketplace, hpp_per_produk):
+-- kasir HANYA boleh lihat, tidak boleh ubah.
+-- PENGECUALIAN: `stok` SENGAJA tidak dimasukkan ke daftar ini (lihat blok
+-- terpisah tepat di bawah) — kasir WAJIB bisa menulis ke `stok` karena setiap
+-- pesanan yang mereka input otomatis mengurangi stok gudang (lihat
+-- terapkanEfekStok() di app.js). Sebelumnya `stok` ikut dibatasi hanya
+-- owner/staff di sini, sehingga SETIAP kasir menyimpan pesanan, sinkronisasi
+-- stok ke server SELALU ditolak RLS -> muncul alert "Gagal menyimpan ke
+-- server" dan data pesanan berisiko tidak tersinkron dengan benar.
 do $$
 declare t text;
 begin
-  for t in select unnest(array['kategori','marketplace','stok','hpp_per_produk'])
+  for t in select unnest(array['kategori','marketplace','hpp_per_produk'])
   loop
     if to_regclass('public.'||t) is not null then
       execute format('drop policy if exists "role_select" on public.%I', t);
@@ -355,6 +362,19 @@ begin
       execute format('create policy "role_write" on public.%I for all using (public.my_role() in (''owner'',''staff'')) with check (public.my_role() in (''owner'',''staff''))', t);
     end if;
   end loop;
+end $$;
+
+-- Tabel `stok`: owner, staff, DAN kasir boleh baca+tulis (kasir perlu ini
+-- supaya pengurangan stok otomatis saat mereka input pesanan benar-benar
+-- tersimpan ke server, bukan cuma tampak berhasil di layar lokal).
+do $$
+begin
+  if to_regclass('public.stok') is not null then
+    execute 'drop policy if exists "role_select" on public.stok';
+    execute 'drop policy if exists "role_write" on public.stok';
+    execute 'create policy "role_select" on public.stok for select using (public.my_role() in (''owner'',''staff'',''kasir'',''viewer''))';
+    execute 'create policy "role_write" on public.stok for all using (public.my_role() in (''owner'',''staff'',''kasir'')) with check (public.my_role() in (''owner'',''staff'',''kasir''))';
+  end if;
 end $$;
 
 -- Tabel pengaturan sensitif (biaya, pengaturan toko): tetap hanya owner
