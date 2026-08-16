@@ -534,6 +534,16 @@
         </div>
       </div>
 
+      <!-- LAPORAN LABA RUGI (format akuntansi) — HANYA muncul saat dicetak.
+           Angka di kartu/grafik di atas layar sudah cukup untuk dipakai
+           sehari-hari, tapi untuk dokumen cetak yang "profesional" (mis.
+           dilampirkan ke laporan ke pemilik/investor/bank), laporan
+           keuangan idealnya berbentuk TABEL rinci dengan format baku
+           (Pendapatan → HPP → Laba Kotor → Biaya Operasional → Laba
+           Bersih), bukan cuma kartu ringkas & chart — angka pasti lebih
+           mudah diverifikasi & tidak bergantung warna/skala grafik. -->
+      <div class="fin-statement-print" id="fin-statement-print"></div>
+
       <!-- "Periode Data" dinaikkan ke level halaman (bukan lagi ditempel di
            dalam kartu Ringkasan Keuangan saja) karena sekarang periode ini
            mengendalikan SELURUH konten laporan di bawah — termasuk grafik
@@ -551,7 +561,9 @@
       </div>
 
       <div class="grid-2 mb18">
-        <div class="card"><div class="card-title">Revenue per Marketplace</div><div class="chart-box" style="height:210px"><canvas id="chartMpBar"></canvas></div></div>
+        <div class="card"><div class="card-title">Revenue per Marketplace</div><div class="chart-box" style="height:210px"><canvas id="chartMpBar"></canvas></div>
+          <div class="fin-print-table-wrap print-only" id="fin-print-mp-table"></div>
+        </div>
         <div class="card"><div class="card-title">Komposisi Biaya</div>
           <div class="chart-box" style="height:170px"><canvas id="chartKeuanganPie"></canvas></div>
           <div id="keuangan-pie-legend" style="display:flex;gap:14px;justify-content:center;margin-top:10px;font-size:12px;color:var(--text2);flex-wrap:wrap"></div>
@@ -571,7 +583,9 @@
             <div style="text-align:center"><div style="font-size:11px;color:var(--danger);font-weight:700;text-transform:uppercase;letter-spacing:.03em">Stok Kritis</div><div style="font-size:18px;font-weight:800;margin-top:4px;color:var(--danger)" id="aset-kritis">0</div></div>
           </div>
         </div>
-        <div class="card"><div class="card-title">Nilai Aset per Kategori</div><div class="chart-box" style="height:210px"><canvas id="chartAsetKategori"></canvas></div></div>
+        <div class="card"><div class="card-title">Nilai Aset per Kategori</div><div class="chart-box" style="height:210px"><canvas id="chartAsetKategori"></canvas></div>
+          <div class="fin-print-table-wrap print-only" id="fin-print-aset-table"></div>
+        </div>
       </div>
 
       <div class="card mb18 fin-glow-card">
