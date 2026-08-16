@@ -593,11 +593,14 @@
         <div class="chart-box" style="height:280px"><canvas id="chartTrenOmzet"></canvas></div>
       </div>
 
-      <div style="display:flex;gap:10px;flex-wrap:wrap" class="no-print">
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center" class="no-print">
         <button class="btn" onclick="exportCSV()">📥 Ekspor CSV Penjualan</button>
         <button class="btn" onclick="exportStokCSV()">📦 Ekspor CSV Stok</button>
         <button class="btn" onclick="exportLabaCSV2()">💰 Ekspor Laporan Laba</button>
-        <button class="btn btn-primary" onclick="window.print()">🖨 Cetak Laporan</button>
+        <button class="btn btn-primary" onclick="cetakLaporanKeuangan()">🖨 Cetak Laporan</button>
+      </div>
+      <div class="fin-print-tip no-print" id="print-tip">
+        💡 Untuk hasil cetak paling rapi: di jendela Cetak nanti, matikan opsi <strong>"Header dan footer"</strong> dan nyalakan <strong>"Grafik latar belakang" (Background graphics)</strong> — biasanya ada di bagian "Lainnya/More settings" pada dialog cetak browser.
       </div>
       <!-- Footer ini hanya tampil saat dicetak — disclaimer + kolom tanda
            tangan, supaya file cetak terlihat seperti laporan resmi. -->
