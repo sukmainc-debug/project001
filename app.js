@@ -3064,7 +3064,23 @@ function dlFile(content,name,type){const a=document.createElement('a');a.href=UR
 // ===== MODAL =====
 function openModal(id){document.getElementById(id).classList.add('open')}
 function closeModal(id){document.getElementById(id).classList.remove('open')}
-window.onclick=function(e){if(e.target.classList.contains('modal-overlay'))e.target.classList.remove('open')}
+// PENTING: klik-di-luar-modal-untuk-menutup HARUS memastikan mousedown & click
+// sama-sama terjadi LANGSUNG di overlay (bukan di dalam modal). Sebelumnya kode
+// ini hanya mengecek target dari event 'click', padahal saat user drag-select
+// teks di dalam sebuah <input> (mis. menyeleksi angka Harga di tabel barang
+// pada form Tambah/Edit Pesanan) lalu mouse terlepas di luar batas modal,
+// browser bisa melaporkan target 'click' sebagai leluhur bersama (.modal-overlay)
+// walau aksi user sepenuhnya terjadi di dalam modal -> modal langsung tertutup
+// sendiri di tengah proses input ("kabur" saat drag). Perbaikan: catat elemen
+// tempat mousedown terjadi; modal hanya ditutup kalau overlay JUGA yang menerima
+// mousedown-nya (klik murni di area gelap luar modal), bukan hasil drag dari dalam.
+let _modalMouseDownTarget=null;
+document.addEventListener('mousedown',function(e){_modalMouseDownTarget=e.target});
+window.onclick=function(e){
+  if(e.target.classList.contains('modal-overlay')&&_modalMouseDownTarget===e.target){
+    e.target.classList.remove('open');
+  }
+};
 
 // ===== BACKUP / RESTORE =====
 function backupData(){dlFile(JSON.stringify(DB,null,2),'omniseller_backup_'+today()+'.json','application/json')}
