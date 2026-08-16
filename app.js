@@ -12,6 +12,26 @@ const DEFAULT_BIAYA={mp_fee:{Shopee:3.5,Tokopedia:2.5,'TikTok Shop':1.8,Lazada:4
 
 let DB={penjualan:[],stok:[],kategori:[...DEFAULT_KAT],marketplace:JSON.parse(JSON.stringify(DEFAULT_MP)),biaya:JSON.parse(JSON.stringify(DEFAULT_BIAYA)),pengaturan:{nama:'Toko Saya',pemilik:'',hp:'',batasStok:10,logo:''},pembelian:[],penggajian:[],lastUpdate:null};
 let _editJualIdx=-1,_editStokIdx=-1,_editKatIdx=-1,_restockIdx=-1,_editMpIdx=-1,_editPembelianIdx=-1,_editPenggajianIdx=-1;
+// ===== PELACAK PERUBAHAN PESANAN ("dirty tracking") =====
+// PENYEBAB UTAMA bug "data pesanan tiba-tiba hilang/berubah sendiri" (mis. Harga
+// Satuan sebuah pesanan tahu-tahu jadi 0): syncPenjualan_() versi lama SELALU
+// menyinkronkan SELURUH isi DB.penjualan (semua pesanan, bukan cuma yang baru
+// diubah) setiap kali ADA SATU SAJA pesanan yang disimpan. Karena app ini dibuka
+// di banyak tab/perangkat (mis. index.html di komputer Owner + kasir.html di
+// tablet kasir) dan tiap tab hanya mengambil data dari Supabase SEKALI saat
+// dibuka (lihat initApp -> loadFromSupabase, tidak ada refresh otomatis
+// setelahnya), maka: begitu tab A mengedit/menambah 1 pesanan lalu tersimpan,
+// SELURUH salinan lokal tab A (yang mungkin sudah "basi"/ketinggalan perubahan
+// dari tab B) ikut ditimpakan ke server -- termasuk menimpa balik Harga Satuan
+// pesanan lain yang baru saja diedit dengan benar oleh tab B, dengan nilai lama
+// dari tab A. Perbaikan: hanya pesanan yang BENAR-BENAR diubah di tab ini yang
+// ditandai "dirty" dan dikirim ke server; pesanan lain yang kebetulan ada di
+// salinan lokal (tapi tidak disentuh) TIDAK PERNAH ikut ditimpakan lagi.
+let _dirtyPesananNo=new Set();      // no_pesanan yang baru ditambah/diedit di tab ini
+let _deletedPesananNo=new Set();    // no_pesanan yang baru dihapus di tab ini
+let _fullResyncPenjualan=false;     // true HANYA untuk operasi sengaja menimpa semua data (seed/restore/reset)
+function tandaiPesananDirty(no){if(no)_dirtyPesananNo.add(String(no).trim())}
+function tandaiPesananDihapus(no){if(!no)return;_dirtyPesananNo.delete(String(no).trim());_deletedPesananNo.add(String(no).trim())}
 let filteredJual=[],filteredStok=[],_labaData=[],_labaFiltered=[],filteredPembelian=[],filteredPenggajian=[];
 let pageJual=1,pageStok=1,pageLaba=1,pagePembelian=1,pagePenggajian=1;
 let _invTab='pembelian';
@@ -199,54 +219,95 @@ async function syncStok_(){
 // detail barang ke tabel `pesanan_item`. Tabel `penjualan` lama TIDAK lagi
 // ditulis di sini (skemanya cuma 1 barang per baris, tidak cukup untuk
 // pesanan dengan banyak barang).
-async function syncPenjualan_(){
-  const headerRows=DB.penjualan.map(r=>({
+function _pesananHeaderRow(r){
+  return{
     no_pesanan:r.no,tanggal:r.tanggal,tgl_iso:r._date||new Date().toISOString(),
     marketplace:r.mp,status:r.status||'Selesai',
     biaya_admin:r.biayaAdmin!=null?r.biayaAdmin:null,
     biaya_tambahan:r.biayaTambahan!=null?r.biayaTambahan:null
+  };
+}
+function _pesananItemRows(pid,r){
+  return(r.items||[]).map(it=>({
+    pesanan_id:pid,produk:it.prod,varian:it.varian||'',kategori:it.kat||'Lainnya',
+    qty:it.qty!=null?it.qty:1,harga_satuan:it.harga!=null?it.harga:0,
+    subtotal:it.subtotal!=null?it.subtotal:(it.qty||1)*(it.harga||0),
+    hpp_saat_transaksi:it.hpp!=null?it.hpp:null
   }));
-  // 1) Upsert semua header pesanan dulu (aman: unique key no_pesanan, sama
-  //    pola safeReplace seperti tabel lain -> tidak akan menghapus data
-  //    server sebelum upsert baru benar-benar berhasil).
-  await safeReplace(TBL_PESANAN, headerRows, 'no_pesanan');
-  if(!DB.penjualan.length)return; // tidak ada pesanan sama sekali -> selesai (safeReplace sudah kosongkan tabel)
+}
+// Ganti isi `pesanan_item` milik satu/beberapa pesanan_id dengan cara AMAN:
+// INSERT baris baru dulu, BARU SETELAH itu berhasil, hapus baris lama.
+// (Urutan lama "hapus dulu baru insert" berbahaya: kalau insert gagal di
+// tengah jalan -mis. koneksi putus saat auto-sync tiap 700ms, atau salah satu
+// baris di batch gagal validasi- baris lama SUDAH TERLANJUR terhapus duluan
+// dan TIDAK BISA balik lagi, sehingga barang/harga pesanan itu hilang
+// permanen dari server walau di layar/local storage masih kelihatan ada.)
+async function _replaceItemsForPesananIds_(pesananIds,newRows){
+  if(!pesananIds.length)return;
+  const{data:oldRows,error:selErr}=await supabaseClient.from(TBL_PESANAN_ITEM).select('id').in('pesanan_id',pesananIds);
+  if(selErr)throw selErr;
+  const oldIds=(oldRows||[]).map(r=>r.id);
+  if(newRows.length){
+    const{error:insErr}=await supabaseClient.from(TBL_PESANAN_ITEM).insert(newRows);
+    if(insErr)throw insErr; // insert gagal -> berhenti di sini, baris LAMA masih utuh, tidak ada data yang hilang
+  }
+  if(oldIds.length){
+    const{error:delErr}=await supabaseClient.from(TBL_PESANAN_ITEM).delete().in('id',oldIds);
+    if(delErr)throw delErr; // kalaupun ini gagal, akibatnya cuma duplikat sementara (akan rapi lagi di sync berikutnya) -> BUKAN kehilangan data
+  }
+}
+async function syncPenjualan_(){
+  // Mode 1: FULL RESYNC — HANYA dipakai untuk operasi yang memang sengaja
+  // menimpa seluruh data (generate data contoh, restore backup, reset data).
+  // Di luar itu app SELALU pakai mode 2 (scoped) di bawah supaya pesanan yang
+  // tidak disentuh di tab ini tidak pernah ikut tertimpa oleh salinan lokal
+  // yang mungkin sudah basi (lihat catatan _dirtyPesananNo di atas).
+  if(_fullResyncPenjualan){
+    _fullResyncPenjualan=false;_dirtyPesananNo.clear();_deletedPesananNo.clear();
+    const headerRows=DB.penjualan.map(_pesananHeaderRow);
+    await safeReplace(TBL_PESANAN, headerRows, 'no_pesanan');
+    if(!DB.penjualan.length)return;
+    const{data:idMap,error:idErr}=await supabaseClient.from(TBL_PESANAN).select('id,no_pesanan');
+    if(idErr)throw idErr;
+    const idByNo={};(idMap||[]).forEach(r=>{idByNo[r.no_pesanan]=r.id});
+    const itemRows=[];
+    DB.penjualan.forEach(r=>{const pid=idByNo[r.no];if(pid==null)return;itemRows.push(..._pesananItemRows(pid,r))});
+    await _replaceItemsForPesananIds_(Object.values(idByNo),itemRows);
+    return;
+  }
 
-  // 2) Ambil id pesanan dari server (hasil upsert) untuk dipetakan ke no_pesanan,
-  //    supaya baris pesanan_item tahu harus terhubung ke pesanan_id yang mana.
-  const{data:idMap,error:idErr}=await supabaseClient.from(TBL_PESANAN).select('id,no_pesanan');
+  // Mode 2: SCOPED SYNC — hanya sentuh pesanan yang benar-benar ditandai
+  // "dirty" (baru ditambah/diedit) atau "dihapus" di tab ini. Pesanan lain
+  // dalam salinan lokal (DB.penjualan) TIDAK disertakan sama sekali dalam
+  // permintaan ke server, jadi tidak mungkin menimpa perubahan pesanan lain
+  // yang dibuat dari tab/perangkat lain sejak tab ini terakhir memuat data.
+  const dirtyNo=[..._dirtyPesananNo];const deletedNo=[..._deletedPesananNo];
+  _dirtyPesananNo.clear();_deletedPesananNo.clear();
+  if(!dirtyNo.length&&!deletedNo.length)return;
+
+  const dirtyOrders=dirtyNo.map(no=>DB.penjualan.find(r=>r.no===no)).filter(Boolean);
+
+  // 1) Hapus pesanan yang memang dihapus user (cascade otomatis menghapus
+  //    baris pesanan_item miliknya, lihat "on delete cascade" di skema SQL).
+  if(deletedNo.length){
+    const{error:delHdrErr}=await supabaseClient.from(TBL_PESANAN).delete().in('no_pesanan',deletedNo);
+    if(delHdrErr)throw delHdrErr;
+  }
+  if(!dirtyOrders.length)return;
+
+  // 2) Upsert HANYA header pesanan yang berubah (bukan seluruh tabel).
+  const headerRows=dirtyOrders.map(_pesananHeaderRow);
+  const{error:upErr}=await supabaseClient.from(TBL_PESANAN).upsert(headerRows,{onConflict:'no_pesanan'});
+  if(upErr)throw upErr;
+
+  // 3) Ambil pesanan_id HANYA untuk pesanan yang berubah tsb, lalu ganti baris
+  //    itemnya (insert-baru-dulu-baru-hapus-lama, lihat _replaceItemsForPesananIds_).
+  const{data:idMap,error:idErr}=await supabaseClient.from(TBL_PESANAN).select('id,no_pesanan').in('no_pesanan',dirtyNo);
   if(idErr)throw idErr;
   const idByNo={};(idMap||[]).forEach(r=>{idByNo[r.no_pesanan]=r.id});
-
-  // 3) Susun semua baris item lokal dengan pesanan_id yang sudah dipetakan.
   const itemRows=[];
-  DB.penjualan.forEach(r=>{
-    const pid=idByNo[r.no];
-    if(pid==null)return; // seharusnya tidak terjadi kalau langkah 1 berhasil
-    (r.items||[]).forEach(it=>{
-      itemRows.push({
-        pesanan_id:pid,produk:it.prod,varian:it.varian||'',kategori:it.kat||'Lainnya',
-        qty:it.qty!=null?it.qty:1,harga_satuan:it.harga!=null?it.harga:0,
-        subtotal:it.subtotal!=null?it.subtotal:(it.qty||1)*(it.harga||0),
-        hpp_saat_transaksi:it.hpp!=null?it.hpp:null
-      });
-    });
-  });
-  // 4) Ganti seluruh baris item HANYA untuk pesanan-pesanan yang ada di data lokal
-  //    saat ini (hapus dulu baris lama milik pesanan_id tersebut, lalu insert ulang
-  //    baris barunya). Ini AMAN dari bug lama: tabel `pesanan_item` tidak punya
-  //    kolom UNIQUE apa pun di data bisnisnya (hanya id auto-increment), jadi insert
-  //    di sini tidak mungkin gagal karena bentrok data duplikat seperti kasus
-  //    No. Pesanan dulu -- beda akar masalah dari bug yang sudah diperbaiki sebelumnya.
-  const pesananIds=Object.values(idByNo);
-  if(pesananIds.length){
-    const{error:delErr}=await supabaseClient.from(TBL_PESANAN_ITEM).delete().in('pesanan_id',pesananIds);
-    if(delErr)throw delErr;
-  }
-  if(itemRows.length){
-    const{error:insErr}=await supabaseClient.from(TBL_PESANAN_ITEM).insert(itemRows);
-    if(insErr)throw insErr;
-  }
+  dirtyOrders.forEach(r=>{const pid=idByNo[r.no];if(pid==null)return;itemRows.push(..._pesananItemRows(pid,r))});
+  await _replaceItemsForPesananIds_(Object.values(idByNo),itemRows);
 }
 async function syncBiayaPengaturan_(){
   const b=DB.biaya||{};const ex=b.extra||{};
@@ -406,6 +467,7 @@ function seedData(){
     const prod=PRODUK[i%10];const varian=VARIAN[i%15];const stok=rnd(0,100);const terjual=rnd(3,60);const kat=katMap[prod]||'Lainnya';const hpp=rnd(15000,180000);
     DB.stok.push({sku:'SKU-'+String(i+1).padStart(4,'0'),prod,varian,kat,stok,terjual,hpp});
   }
+  _fullResyncPenjualan=true; // sengaja menimpa seluruh data (generate data contoh)
   saveDB(['penjualan','stok']);
 }
 
@@ -450,6 +512,39 @@ async function initApp(){
   populateMpDropdowns();
   document.getElementById('f-tgl').value=today();
   (function(){const t=localStorage.getItem('omni_theme');if(t==='dark')document.documentElement.setAttribute('data-theme','dark')})();
+  aktifkanAutoRefresh();
+}
+
+// ===== AUTO-REFRESH DARI SERVER (mengurangi jendela "data basi" antar tab/perangkat) =====
+// Sebelumnya data HANYA diambil dari Supabase sekali saat halaman dibuka (initApp),
+// lalu tidak pernah di-refresh lagi selama tab itu tetap terbuka -- padahal setiap
+// aksi simpan tetap mengirim salinan lokal ke server (lihat catatan _dirtyPesananNo
+// di atas). Kalau tab dibiarkan terbuka lama (mis. kasir yang membuka kasir.html
+// dari pagi), datanya makin lama makin ketinggalan dibanding pesanan/stok yang
+// diinput dari tab/perangkat lain. Fungsi ini diam-diam menyegarkan data dari
+// Supabase saat tab ini kembali aktif (ganti tab/aplikasi lalu balik lagi), TAPI
+// hanya jika: (a) tidak sedang ada modal tambah/edit yang terbuka -- supaya tidak
+// mengganggu input yang sedang diketik, dan (b) tidak ada perubahan lokal yang
+// belum selesai tersinkron ke server -- supaya perubahan yang belum terkirim
+// tidak ketimpa oleh data lama dari server.
+let _lastAutoRefresh=0;
+function adaModalTerbuka(){return!!document.querySelector('.modal-overlay.open')}
+function adaPerubahanBelumSinkron(){return _dirtyPesananNo.size>0||_deletedPesananNo.size>0||_pendingTables.size>0||!!_syncTimeout}
+async function refreshFromServerIfIdle(){
+  if(adaModalTerbuka()||adaPerubahanBelumSinkron())return;
+  if(Date.now()-_lastAutoRefresh<15000)return; // jangan terlalu sering (min. 15 detik sekali)
+  _lastAutoRefresh=Date.now();
+  const cloud=await loadFromSupabase();
+  if(!cloud||adaModalTerbuka()||adaPerubahanBelumSinkron())return; // cek ulang: jangan timpa kalau user sudah mulai mengedit selagi fetch berjalan
+  DB=cloud;
+  localStorage.setItem('omniseller_v2',JSON.stringify(DB));
+  refreshMpGlobals();
+  filteredStok=[...DB.stok];filteredPembelian=[...DB.pembelian];filteredPenggajian=[...DB.penggajian];
+  renderDashboard();filterJual();renderStokTable();filterPembelian();filterPenggajian();
+}
+function aktifkanAutoRefresh(){
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden)refreshFromServerIfIdle()});
+  window.addEventListener('focus',refreshFromServerIfIdle);
 }
 
 // ===== ADMIN AUTH (Supabase Auth) + ROLE/PRIVILEGE =====
@@ -1659,6 +1754,7 @@ function simpanPesanan(){
   recalcOrderTotal(r);
   if(idx!==''&&idx>=0){
     const old=DB.penjualan[parseInt(idx)];
+    if(old.no!==r.no)tandaiPesananDihapus(old.no); // no. pesanan diganti -> hapus baris lama di server dgn no lama
     terapkanEfekStok(old,+1);   // kembalikan dulu efek stok dari data lama (qty/produk/status lama)
     DB.penjualan[parseInt(idx)]=r;
     terapkanEfekStok(r,-1);     // terapkan efek stok dari data baru
@@ -1666,6 +1762,7 @@ function simpanPesanan(){
     DB.penjualan.unshift(r);
     terapkanEfekStok(r,-1);
   }
+  tandaiPesananDirty(r.no); // hanya pesanan INI yang akan dikirim ke server, bukan seluruh DB.penjualan
   saveDB(['penjualan','stok']);filteredStok=[...DB.stok];filterJual();renderStokTable();renderDashboard();closeModal('modal-tambah-jual');
 }
 
@@ -1794,6 +1891,7 @@ function hapusData(type,idx){
     const order=DB.penjualan[idx];
     terapkanEfekStok(order,+1); // kembalikan stok yang sebelumnya terpakai pesanan ini
     catatAktivitas('Hapus','Pesanan',`No. ${order.no} — ${order.mp} — ${fmtRp(order.total)}`);
+    tandaiPesananDihapus(order.no); // hanya pesanan INI yang akan dihapus di server
     DB.penjualan.splice(idx,1);filteredStok=[...DB.stok];filterJual();renderStokTable();affected=['penjualan','stok'];
   }
   else if(type==='stok'){const s=DB.stok[idx];catatAktivitas('Hapus','Stok Produk',`${s.prod}${s.varian?' - '+s.varian:''} (SKU ${s.sku})`);DB.stok.splice(idx,1);filteredStok=[...DB.stok];renderStokTable();affected=['stok']}
@@ -2850,25 +2948,42 @@ function processCSV(file,type){
           imported++;
         }catch(err){errors++}
       }
+      let hargaDipertahankan=0; // hitung berapa baris yang diselamatkan dari bug "harga jadi 0" di bawah
       order.forEach(key=>{
         const orderBaru=grouped[key];
         if(!orderBaru.items.length)orderBaru.items=[{prod:'–',varian:'',kat:'Lainnya',qty:1,harga:0,subtotal:0}];
-        recalcOrderTotal(orderBaru);
         // Cegah No. Pesanan duplikat dengan data yang SUDAH ada sebelumnya di aplikasi
         // (yang menyebabkan gagal sinkron ke Supabase): timpa (update), jangan tambah baris baru.
         const idxAda=DB.penjualan.findIndex(r=>r.no.trim().toLowerCase()===key);
         if(idxAda!==-1){
+          // PENGAMAN: file CSV yang dibuka/disunting di Excel/Sheets sering kehilangan
+          // format angka atau kolom Harga Satuan kosong tanpa disadari. Kalau baris CSV
+          // untuk produk yang SUDAH ADA di pesanan ini sama sekali tidak membawa info
+          // harga (harga & subtotal jadi 0 padahal data lama harganya > 0), jangan timpa
+          // jadi 0 -- pertahankan harga lama. Ini akar salah satu penyebab bug "Harga
+          // Satuan tiba-tiba hilang": import ulang CSV yang datanya sudah rusak/kepotong.
+          const oldOrder=DB.penjualan[idxAda];
+          orderBaru.items.forEach(it=>{
+            if(it.harga===0&&it.subtotal===0){
+              const lama=(oldOrder.items||[]).find(o=>o.prod===it.prod&&(o.varian||'')===(it.varian||''));
+              if(lama&&(lama.harga||0)>0){it.harga=lama.harga;it.subtotal=(it.qty||1)*lama.harga;hargaDipertahankan++}
+            }
+          });
+          recalcOrderTotal(orderBaru);
           // PENTING: sebelumnya baris ini TIDAK memanggil terapkanEfekStok sama sekali,
           // sehingga pesanan yang masuk lewat import CSV tidak pernah mengurangi stok
           // gudang / menambah "terjual" di tabel Stok (penyebab data Penjualan & Stok
           // tidak sinkron). Sekarang: balikkan dulu efek pesanan lama, baru terapkan efek baru.
-          terapkanEfekStok(DB.penjualan[idxAda],+1);
+          terapkanEfekStok(oldOrder,+1);
           DB.penjualan[idxAda]=orderBaru;
         }else{
+          recalcOrderTotal(orderBaru);
           DB.penjualan.push(orderBaru);
         }
         terapkanEfekStok(orderBaru,-1);
+        tandaiPesananDirty(orderBaru.no); // hanya pesanan yang diimpor yg dikirim ke server, bukan seluruh DB.penjualan
       });
+      if(hargaDipertahankan)console.warn(`Import CSV: ${hargaDipertahankan} baris tidak membawa data harga untuk produk yang sudah ada -- harga lama dipertahankan (tidak ditimpa jadi 0).`);
     }else{
       for(let i=1;i<lines.length;i++){
         const cols=parseCSVLine(lines[i]);const row={};headers.forEach((h,j)=>row[h]=(cols[j]||'').trim());
@@ -2972,10 +3087,10 @@ function migrasiPenjualanLama(list){
     return{...r,items:r.items||[]};
   });
 }
-function restoreData(e){const reader=new FileReader();reader.onload=function(ev){try{DB=JSON.parse(ev.target.result);if(!DB.marketplace||!DB.marketplace.length)DB.marketplace=JSON.parse(JSON.stringify(DEFAULT_MP));DB.penjualan=migrasiPenjualanLama(DB.penjualan);if(!DB.pembelian)DB.pembelian=[];if(!DB.penggajian)DB.penggajian=[];refreshMpGlobals();saveDB();filteredStok=[...DB.stok];filteredPembelian=[...DB.pembelian];filteredPenggajian=[...DB.penggajian];applyPengaturan();populateKatDropdowns();populateMpDropdowns();ppSetMode('pp-dash','semua');renderDashboard();filterJual();renderStokTable();catatAktivitas('Restore','Data',`Pulihkan backup: ${DB.penjualan.length} pesanan, ${DB.stok.length} varian`);alert('Data dipulihkan! '+DB.penjualan.length+' pesanan, '+DB.stok.length+' varian.')}catch(err){alert('File backup tidak valid: '+err.message)}};reader.readAsText(e.target.files[0])}
+function restoreData(e){const reader=new FileReader();reader.onload=function(ev){try{DB=JSON.parse(ev.target.result);if(!DB.marketplace||!DB.marketplace.length)DB.marketplace=JSON.parse(JSON.stringify(DEFAULT_MP));DB.penjualan=migrasiPenjualanLama(DB.penjualan);if(!DB.pembelian)DB.pembelian=[];if(!DB.penggajian)DB.penggajian=[];refreshMpGlobals();_fullResyncPenjualan=true;saveDB();filteredStok=[...DB.stok];filteredPembelian=[...DB.pembelian];filteredPenggajian=[...DB.penggajian];applyPengaturan();populateKatDropdowns();populateMpDropdowns();ppSetMode('pp-dash','semua');renderDashboard();filterJual();renderStokTable();catatAktivitas('Restore','Data',`Pulihkan backup: ${DB.penjualan.length} pesanan, ${DB.stok.length} varian`);alert('Data dipulihkan! '+DB.penjualan.length+' pesanan, '+DB.stok.length+' varian.')}catch(err){alert('File backup tidak valid: '+err.message)}};reader.readAsText(e.target.files[0])}
 function resetData(){if(!canManageSettings()){alert('Hanya Owner yang bisa reset data.');return}if(confirm('Hapus SEMUA data penjualan & stok? Tindakan ini tidak bisa dibatalkan.')){
   DB.penjualan=[];DB.stok=[];DB.kategori=[...DEFAULT_KAT];DB.marketplace=JSON.parse(JSON.stringify(DEFAULT_MP));DB.biaya=JSON.parse(JSON.stringify(DEFAULT_BIAYA));DB.pembelian=[];DB.penggajian=[];
-  refreshMpGlobals();saveDB();filteredStok=[...DB.stok];filteredPembelian=[];filteredPenggajian=[];populateKatDropdowns();populateMpDropdowns();applyPengaturan();ppSetMode('pp-dash','semua');renderDashboard();filterJual();renderStokTable();
+  refreshMpGlobals();_fullResyncPenjualan=true;saveDB();filteredStok=[...DB.stok];filteredPembelian=[];filteredPenggajian=[];populateKatDropdowns();populateMpDropdowns();applyPengaturan();ppSetMode('pp-dash','semua');renderDashboard();filterJual();renderStokTable();
   catatAktivitas('Reset','Data','Semua data penjualan & stok dikosongkan');
   alert('Semua data berhasil dikosongkan. Silakan mulai input data Anda sendiri.');
 }}
