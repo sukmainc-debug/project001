@@ -631,6 +631,7 @@ a:focus-visible,button:focus-visible,.btn:focus-visible,.nav-item:focus-visible,
 .fin-print-footer{display:none}
 .fin-statement-print{display:none}
 .print-only{display:none}
+.fin-print-tip{font-size:11.5px;color:var(--text3);background:var(--surface2);border:1px dashed var(--border2);border-radius:10px;padding:9px 12px;margin-top:2px;line-height:1.5}
 
 /* =========================================================
    MODE CETAK — dipicu tombol "🖨 Cetak Laporan" (window.print()).
@@ -641,8 +642,34 @@ a:focus-visible,button:focus-visible,.btn:focus-visible,.nav-item:focus-visible,
    ========================================================= */
 @media print{
   @page{margin:14mm;size:A4}
-  html,body{background:#fff!important}
+  html,body{background:#fff!important;height:auto!important;min-height:0!important}
   body{font-family:'Segoe UI',Arial,Helvetica,sans-serif;-webkit-print-color-adjust:exact;print-color-adjust:exact;color:#1a1a1a!important}
+  /* PENTING — Shell aplikasi (#app-wrap/.main/.page-content) didesain SELALU
+     gelap (lihat --shell-bg2 di :root, tidak berubah walau tema terang/gelap
+     dipilih) dan #app-wrap dipatok height:100vh. Kalau tidak dinetralkan di
+     sini, sisa ruang gelap di sekeliling & di bawah konten akan ikut tercetak
+     sebagai balok hitam (persis gejala di laporan sebelum diperbaiki). */
+  #app-wrap{background:#fff!important;height:auto!important;min-height:0!important;display:block!important}
+  .main{background:#fff!important;overflow:visible!important}
+  .page-content{background:#fff!important}
+  /* PENTING — banyak teks di seluruh aplikasi memakai warna lewat variabel
+     CSS (var(--text)/var(--text2)/var(--text3) dst, ada yang ditulis inline
+     lewat atribut style="..." langsung di HTML). Variabel ini berubah jadi
+     putih/abu terang saat toko memakai Mode Gelap. Cara paling aman & tuntas
+     (bukan menambal satu-satu elemen) adalah memaksa SEMUA variabel warna ke
+     nilai tema terang KHUSUS saat mencetak, apa pun tema yang sedang aktif di
+     layar — supaya hasil cetak selalu konsisten gelap-di-atas-putih dan tidak
+     ada teks yang "hilang" karena warnanya senada kertas.
+  */
+  :root,[data-theme="dark"]{
+    --bg:#ffffff!important;--surface:#ffffff!important;--surface2:#f6f7fb!important;
+    --border:rgba(15,23,42,.14)!important;--border2:rgba(15,23,42,.2)!important;
+    --text:#111318!important;--text2:#4b5468!important;--text3:#6b7488!important;
+    --accent:#2f5fd6!important;--accent-dark:#1d4ed8!important;--accent-light:#e6efff!important;
+    --success:#0a8a5c!important;--success-bg:#eafaf3!important;
+    --warning:#b45f06!important;--warning-bg:#fdf1de!important;
+    --danger:#c0221f!important;--danger-bg:#fbe8e8!important;
+  }
   .sidebar,.topbar,.no-print,#login-screen,.modal-overlay,.toast-container{display:none!important}
   .main{margin-left:0!important}
   .page-content{padding:0!important;max-width:100%!important}
