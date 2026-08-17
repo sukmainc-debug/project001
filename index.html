@@ -532,31 +532,31 @@
           <img id="fin-print-logo" alt="logo" style="display:none">
           <div>
             <div class="fin-print-toko" id="fin-print-toko">Toko Saya</div>
-            <div class="fin-print-sub">Laporan Keuangan — OmniSeller</div>
+            <div class="fin-print-sub">LAPORAN TAHUNAN KEUANGAN &amp; KINERJA USAHA</div>
             <div class="fin-print-owner" id="fin-print-owner"></div>
           </div>
         </div>
         <div class="fin-print-meta">
-          <div id="fin-print-periode">Periode: –</div>
-          <div id="fin-print-tanggal">Dicetak: –</div>
+          <div class="fin-print-meta-grid">
+            <div><span>Periode</span><b id="fin-print-periode">–</b></div>
+            <div><span>Mata Uang</span><b id="fin-print-mata-uang">Indonesian Rupiah (IDR)</b></div>
+            <div><span>Tanggal Cetak</span><b id="fin-print-tanggal">–</b></div>
+            <div><span>Sumber Data</span><b id="fin-print-sumber">Sistem OmniSeller</b></div>
+          </div>
         </div>
       </div>
       <!-- Judul dokumen resmi, hanya tampil saat dicetak — memberi kesan
            "dokumen laporan keuangan" yang jelas, terpisah dari kop toko. -->
       <div class="fin-print-doctitle print-only" id="fin-print-doctitle">
-        <div class="fin-print-doctitle-main">Laporan Keuangan</div>
         <div class="fin-print-doctitle-sub" id="fin-print-doctitle-sub">Untuk Periode –</div>
       </div>
 
-      <!-- LAPORAN LABA RUGI (format akuntansi) — HANYA muncul saat dicetak.
-           Angka di kartu/grafik di atas layar sudah cukup untuk dipakai
-           sehari-hari, tapi untuk dokumen cetak yang "profesional" (mis.
-           dilampirkan ke laporan ke pemilik/investor/bank), laporan
-           keuangan idealnya berbentuk TABEL rinci dengan format baku
-           (Pendapatan → HPP → Laba Kotor → Biaya Operasional → Laba
-           Bersih), bukan cuma kartu ringkas & chart — angka pasti lebih
-           mudah diverifikasi & tidak bergantung warna/skala grafik. -->
-      <div class="fin-statement-print" id="fin-statement-print"></div>
+      <!-- Penanda judul bagian bernomor "1. Visualisasi & Analisis Grafik
+           Keuangan" — meniru gaya heading bernomor pada laporan keuangan
+           korporat referensi. Hanya tampil saat dicetak; grup chart di
+           bawahnya (Revenue per Marketplace, Komposisi Biaya, Aset Stok,
+           Tren Omzet) semuanya berada dalam bagian bernomor ini. -->
+      <div class="fin-section-title print-only">1. Visualisasi &amp; Analisis Grafik Keuangan</div>
 
       <!-- "Periode Data" dinaikkan ke level halaman (bukan lagi ditempel di
            dalam kartu Ringkasan Keuangan saja) karena sekarang periode ini
@@ -607,6 +607,26 @@
         <div class="chart-box" style="height:280px"><canvas id="chartTrenOmzet"></canvas></div>
       </div>
 
+      <!-- LAPORAN LABA RUGI (format akuntansi) — HANYA muncul saat dicetak.
+           Angka di kartu/grafik di atas layar sudah cukup untuk dipakai
+           sehari-hari, tapi untuk dokumen cetak yang "profesional" (mis.
+           dilampirkan ke laporan ke pemilik/investor/bank), laporan
+           keuangan idealnya berbentuk TABEL rinci dengan format baku
+           (Pendapatan → HPP → Laba Kotor → Biaya Operasional → Laba
+           Bersih), bukan cuma kartu ringkas & chart — angka pasti lebih
+           mudah diverifikasi & tidak bergantung warna/skala grafik.
+           Ditempatkan SETELAH grup grafik (bukan lagi di paling atas)
+           supaya alur laporan cetak mengikuti pola dokumen referensi:
+           ringkasan kartu -> visualisasi grafik -> tabel laba rugi rinci. -->
+      <div class="fin-statement-print" id="fin-statement-print"></div>
+
+      <!-- CATATAN RINGKAS EKSEKUTIF — HANYA muncul saat dicetak. Ringkasan
+           naratif singkat (3 poin) yang diturunkan otomatis dari data
+           periode terpilih: kanal/marketplace penyumbang omzet terbesar,
+           komposisi biaya, dan catatan margin — meniru bagian "Catatan
+           Ringkas Eksekutif" pada laporan keuangan korporat referensi. -->
+      <div class="fin-notes-print" id="fin-notes-print"></div>
+
       <!-- DAFTAR RINCIAN PESANAN (per No. Pesanan) — HANYA muncul saat dicetak.
            Kartu & grafik di atas cuma menunjukkan ANGKA TOTAL per periode;
            lampiran ini memberi bukti rincian tiap transaksi yang menyusun
@@ -630,8 +650,8 @@
         <div class="fin-print-disclaimer">Laporan ini dibuat otomatis oleh sistem OmniSeller Dashboard berdasarkan data yang tercatat. Angka Laba Bersih &amp; Nilai Aset Stok bersifat estimasi.</div>
         <div class="fin-print-signdate" id="fin-print-signdate">–</div>
         <div class="fin-print-sign">
-          <div class="fin-print-sign-box"><div class="fin-print-sign-line"></div><span>Dibuat oleh</span><div class="fin-print-sign-name" id="fin-print-sign-owner"></div></div>
-          <div class="fin-print-sign-box"><div class="fin-print-sign-line"></div><span>Diketahui oleh</span></div>
+          <div class="fin-print-sign-box"><span>Dibuat oleh,</span><div class="fin-print-sign-line"></div><div class="fin-print-sign-name" id="fin-print-sign-owner"></div><div class="fin-print-sign-role">Pemilik / Penyusun Laporan</div></div>
+          <div class="fin-print-sign-box"><span>Disetujui oleh,</span><div class="fin-print-sign-line"></div><div class="fin-print-sign-name">&nbsp;</div><div class="fin-print-sign-role">Pihak Berwenang</div></div>
         </div>
       </div>
     </div>
