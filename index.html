@@ -567,11 +567,25 @@
         <div class="periode-picker" id="pp-laporan"></div>
       </div>
 
-      <div class="card mb18 fin-hero">
-        <div class="card-title">
-          <span id="keuangan-title">Ringkasan Keuangan</span>
+      <!-- DIBUNGKUS BERSAMA (khusus cetak) — Ringkasan Keuangan (kartu) +
+           Tren Omzet SENGAJA ditempatkan berurutan tanpa jeda di sini
+           (bukan di bawah bersama grafik lain) supaya keduanya selalu
+           tercetak di HALAMAN YANG SAMA (lihat .fin-print-keep-together
+           page-break-inside:avoid di style.css). Grafik lain (Revenue per
+           Marketplace, Komposisi Biaya, Aset Stok) tetap menyusul di
+           bawahnya seperti biasa. -->
+      <div class="fin-print-keep-together">
+        <div class="card mb18 fin-hero">
+          <div class="card-title">
+            <span id="keuangan-title">Ringkasan Keuangan</span>
+          </div>
+          <div class="fin-metric-grid" id="keuangan-rows"></div>
         </div>
-        <div class="fin-metric-grid" id="keuangan-rows"></div>
+
+        <div class="card mb18">
+          <div class="card-title"><span id="tren-omzet-title">Tren Omzet</span></div>
+          <div class="chart-box" style="height:280px"><canvas id="chartTrenOmzet"></canvas></div>
+        </div>
       </div>
 
       <div class="grid-2 mb18">
@@ -600,11 +614,6 @@
         <div class="card"><div class="card-title">Nilai Aset per Kategori</div><div class="chart-box" style="height:210px"><canvas id="chartAsetKategori"></canvas></div>
           <div class="fin-print-table-wrap print-only" id="fin-print-aset-table"></div>
         </div>
-      </div>
-
-      <div class="card mb18">
-        <div class="card-title"><span id="tren-omzet-title">Tren Omzet</span></div>
-        <div class="chart-box" style="height:280px"><canvas id="chartTrenOmzet"></canvas></div>
       </div>
 
       <!-- LAPORAN LABA RUGI (format akuntansi) — HANYA muncul saat dicetak.
