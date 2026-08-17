@@ -786,6 +786,15 @@ a:focus-visible,button:focus-visible,.btn:focus-visible,.nav-item:focus-visible,
   .section.active{display:block!important}
   .card{box-shadow:none!important;border:1px solid #ddd!important;break-inside:avoid;page-break-inside:avoid;margin-bottom:12px!important;background:#fff!important}
 
+  /* ===== Ringkasan Keuangan + Tren Omzet SENGAJA dibungkus 1 wrapper agar
+     browser mencetak keduanya di HALAMAN YANG SAMA (tidak terpisah oleh
+     jeda halaman otomatis) — sesuai permintaan "1 halaman dengan Ringkasan
+     Keuangan". Tinggi chart Tren Omzet juga dipangkas sedikit khusus cetak
+     (dari 280px di layar) supaya kombinasi kartu + grafik lebih pasti muat
+     dalam tinggi 1 halaman A4 bersama kop laporan di atasnya. ===== */
+  .fin-print-keep-together{break-inside:avoid;page-break-inside:avoid}
+  .fin-print-keep-together .chart-box{height:170px!important}
+
   /* ===== KARTU RINGKASAN (metric cards) — gaya "kotak putih bersih" ala
      dokumen referensi: border tipis, label kecil huruf kapital abu-abu,
      angka besar tebal warna navy, dan sub-teks berwarna sesuai jenis
