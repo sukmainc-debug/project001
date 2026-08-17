@@ -593,6 +593,14 @@
         <div class="chart-box" style="height:280px"><canvas id="chartTrenOmzet"></canvas></div>
       </div>
 
+      <!-- DAFTAR RINCIAN PESANAN (per No. Pesanan) — HANYA muncul saat dicetak.
+           Kartu & grafik di atas cuma menunjukkan ANGKA TOTAL per periode;
+           lampiran ini memberi bukti rincian tiap transaksi yang menyusun
+           angka tersebut, supaya laporan cetak bisa diperiksa/diaudit sampai
+           ke level pesanan (bukan cuma ringkasan), sesuai periode yang
+           sedang dipilih di atas. -->
+      <div class="fin-orders-print" id="fin-orders-print"></div>
+
       <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center" class="no-print">
         <button class="btn" onclick="exportCSV()">📥 Ekspor CSV Penjualan</button>
         <button class="btn" onclick="exportStokCSV()">📦 Ekspor CSV Stok</button>
