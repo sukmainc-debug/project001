@@ -1760,13 +1760,26 @@ function terapkanEfekStok(order,arah){
 // sinkronisasi (mis. import CSV lama yang tidak memotong stok) yang dikoreksi.
 function rekonsiliasiStok(){
   if(!canWriteOrders()){alert('Anda tidak punya izin untuk melakukan rekonsiliasi.');return}
-  if(!confirm('Hitung ulang "terjual" & sesuaikan "stok" semua SKU berdasarkan seluruh Data Penjualan aktif saat ini?\n\nGunakan ini jika ada SKU yang jumlah terjualnya tidak sesuai dengan Data Penjualan (misal karena pernah import CSV sebelum perbaikan sinkronisasi).'))return;
+  if(!confirm('Hitung ulang "terjual" & sesuaikan "stok" semua SKU berdasarkan seluruh Data Penjualan aktif saat ini?\n\nGunakan ini jika ada SKU yang jumlah terjualnya tidak sesuai dengan Data Penjualan (misal karena pernah import CSV sebelum perbaikan sinkronisasi).\n\nCatatan: Data Penjualan itu sendiri TIDAK PERNAH diubah/dihapus oleh proses ini -- hanya angka "stok" & "terjual" di menu Stok Gudang yang disesuaikan.'))return;
   const terjualBaru={}; // key: sku -> total qty aktif dari Penjualan
+  // PENTING: item pesanan yang nama produk/variannya TIDAK cocok dengan SKU
+  // manapun di Stok Gudang saat ini (mis. produk pernah di-rename, SKU lama
+  // dihapus, atau ada typo) dulu DIAM-DIAM diabaikan di sini. Akibatnya SKU
+  // terkait dianggap "terjual = 0" oleh proses ini -> angka terjualnya
+  // di-reset ke 0 dan stoknya melonjak naik, walau baris pesanannya sendiri
+  // masih ada & aman di Data Penjualan. Ini penyebab paling umum kesan
+  // "data penjualan hilang" setelah rekonsiliasi. Sekarang item yang tidak
+  // cocok DIKUMPULKAN & DILAPORKAN ke user, bukan cuma dibuang diam-diam.
+  const takCocok={}; // key: "produk|varian" -> total qty yang tidak ketemu SKU-nya
   DB.penjualan.forEach(order=>{
     if(!isStatusAktif(order.status))return;
     (order.items||[]).forEach(item=>{
       const si=cariStok(item.prod,item.varian);
-      if(!si)return;
+      if(!si){
+        const key=(item.prod||'–')+(item.varian?' · '+item.varian:'');
+        takCocok[key]=(takCocok[key]||0)+(item.qty||0);
+        return;
+      }
       terjualBaru[si.sku]=(terjualBaru[si.sku]||0)+(item.qty||0);
     });
   });
@@ -1783,8 +1796,18 @@ function rekonsiliasiStok(){
   });
   saveDB(['stok']);filteredStok=[...DB.stok];renderStokTable();renderDashboard();
   if(jumlahDiperbaiki)catatAktivitas('Rekonsiliasi','Stok Produk',`${jumlahDiperbaiki} SKU disesuaikan`);
+  const daftarTakCocok=Object.entries(takCocok).sort((a,b)=>b[1]-a[1]);
   const res=document.getElementById('rekonsiliasi-result');
-  if(res)res.innerHTML=jumlahDiperbaiki?`<div class="alert alert-success">✅ Selesai. <strong>${jumlahDiperbaiki} SKU</strong> disesuaikan agar "terjual" cocok dengan Data Penjualan.</div>`:`<div class="alert alert-success">✅ Semua SKU sudah sinkron, tidak ada yang perlu diperbaiki.</div>`;
+  if(res){
+    let html=jumlahDiperbaiki?`<div class="alert alert-success">✅ Selesai. <strong>${jumlahDiperbaiki} SKU</strong> disesuaikan agar "terjual" cocok dengan Data Penjualan.</div>`:`<div class="alert alert-success">✅ Semua SKU sudah sinkron, tidak ada yang perlu diperbaiki.</div>`;
+    if(daftarTakCocok.length){
+      html+=`<div class="alert alert-warning" style="margin-top:8px">⚠️ <strong>${daftarTakCocok.length} nama produk/varian</strong> di Data Penjualan tidak cocok dengan SKU manapun di Stok Gudang saat ini, sehingga qty-nya TIDAK ikut dihitung ke "terjual" (data pesanannya sendiri tetap aman &amp; tidak dihapus):<ul style="margin:6px 0 0 18px;padding:0">`+
+        daftarTakCocok.slice(0,30).map(([k,q])=>`<li>${k} — ${q} pcs</li>`).join('')+
+        (daftarTakCocok.length>30?`<li>...dan ${daftarTakCocok.length-30} lainnya</li>`:'')+
+        `</ul><div style="margin-top:6px">Perbaiki dengan menyamakan nama Produk/Varian di Data Penjualan dengan nama di Stok Gudang (atau tambahkan SKU yang sesuai), lalu jalankan Rekonsiliasi lagi.</div></div>`;
+    }
+    res.innerHTML=html;
+  }
 }
 
 function simpanPesanan(){
