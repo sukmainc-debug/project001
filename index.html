@@ -97,20 +97,22 @@
   <div class="auth-card">
     <div style="text-align:center">
       <div class="auth-pending-icon">⏳</div>
-      <h1 style="margin-bottom:8px;font-size:22px;font-weight:600;letter-spacing:-.3px;color:#f3f7fd">Menunggu Persetujuan</h1>
-      <p style="color:#8ba3c7;font-size:13px;line-height:1.7;margin-bottom:6px">
-        Akun <strong id="pending-email" style="color:#eaf6ff"></strong> sudah berhasil terdaftar, tapi
+      <h1 style="margin-bottom:8px;font-size:22px;font-weight:600;letter-spacing:-.3px;color:#f3fdf8">Menunggu Persetujuan</h1>
+      <p style="color:#8bc7a3;font-size:13px;line-height:1.7;margin-bottom:6px">
+        Akun <strong id="pending-email" style="color:#eafff5"></strong> sudah berhasil terdaftar, tapi
         hak akses Anda belum diaktifkan oleh Owner/Administrator toko ini.
       </p>
-      <p style="color:#5b6a86;font-size:12px;margin-bottom:24px">
+      <p style="color:#6b8577;font-size:12px;margin-bottom:24px">
         Hubungi Owner untuk mengaktifkan akses Anda dari menu Pengaturan → Manajemen User.
       </p>
-      <button class="auth-btn-primary" style="background:rgba(255,255,255,.06);color:#eaf6ff;border:1px solid rgba(255,255,255,.12);box-shadow:none" onclick="adminLogout()">Keluar</button>
+      <button class="auth-btn-primary" style="background:rgba(167,243,208,.08);color:#eafff5;border:1px solid rgba(167,243,208,.16);box-shadow:none" onclick="adminLogout()">Keluar</button>
     </div>
   </div>
 </div>
 
 <div id="app-wrap" style="display:none">
+<!-- Overlay gelap di belakang sidebar saat dibuka di layar sempit (tap utk menutup) -->
+<div class="sidebar-overlay" onclick="closeSidebar()"></div>
 <!-- SIDEBAR -->
 <aside class="sidebar">
   <div class="sidebar-logo" id="sidebar-logo-wrap">
@@ -201,7 +203,12 @@
 <!-- MAIN -->
 <div class="main">
   <div class="topbar">
-    <div style="font-size:15px;font-weight:600;color:var(--text)" id="page-title">Dashboard</div>
+    <div style="display:flex;align-items:center;gap:12px;min-width:0">
+      <button class="sidebar-toggle" onclick="toggleSidebar()" aria-label="Buka menu" title="Menu">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      </button>
+      <div style="font-size:15px;font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap" id="page-title">Dashboard</div>
+    </div>
     <div style="display:flex;align-items:center;gap:10px">
       <span id="sync-status" style="font-size:11px;color:var(--text3)" title="Status sinkronisasi Supabase">☁️ Menghubungkan...</span>
       <div id="topbar-jual-tools" style="display:flex;align-items:center;gap:10px">
