@@ -669,6 +669,7 @@ function showAppScreen(){
   document.getElementById('login-screen').style.display='none';
   document.getElementById('pending-screen').style.display='none';
   document.getElementById('app-wrap').style.display='';
+  restoreSidebarCollapsed();
 }
 // Daftar menu yang boleh diakses berdasarkan ROLE yang sedang login.
 // null artinya tidak dibatasi (Owner & Staff — semua menu boleh).
@@ -1170,6 +1171,41 @@ function setRouteHash(id,replace){
 let _routingInternal=false;
 window.addEventListener('hashchange',()=>{if(!_routingInternal)handleHashRoute()});
 
+// ===== SIDEBAR RESPONSIF (hamburger) =====
+// Satu tombol hamburger di topbar, dua perilaku beda tergantung lebar layar:
+//  - Desktop (>900px): sidebar tetap bagian dari layout (bukan overlay) —
+//    hamburger MENGECILKAN lebar sidebar jadi 0 supaya halaman terasa lebih
+//    lebar, lalu ditekan lagi utk mengembalikannya. Preferensi disimpan di
+//    localStorage supaya tetap terkolaps saat halaman di-refresh.
+//  - Mobile/tablet (≤900px): sidebar off-canvas (lihat style.css), hamburger
+//    MEMUNCULKANNYA sebagai panel melayang di atas konten + overlay gelap.
+// Kedua state sengaja dipisah jadi 2 class body ('sidebar-collapsed' utk
+// desktop, 'sidebar-open' utk mobile) supaya tidak saling bentrok saat
+// resize dari satu breakpoint ke breakpoint lain.
+const SIDEBAR_COLLAPSE_KEY='omni_sidebar_collapsed';
+function toggleSidebar(){
+  if(window.innerWidth<=900){
+    document.body.classList.toggle('sidebar-open');
+  }else{
+    const collapsed=document.body.classList.toggle('sidebar-collapsed');
+    try{localStorage.setItem(SIDEBAR_COLLAPSE_KEY,collapsed?'1':'0');}catch(e){}
+  }
+}
+function closeSidebar(){document.body.classList.remove('sidebar-open')}
+function restoreSidebarCollapsed(){
+  // Dipanggil sekali saat app-wrap pertama kali ditampilkan (lihat showAppScreen()) —
+  // hanya berlaku di desktop, supaya di HP tidak ikut "terkolaps" (di HP sidebar
+  // memang defaultnya off-canvas/tersembunyi lewat CSS, bukan lewat class ini).
+  if(window.innerWidth<=900)return;
+  let saved=null;
+  try{saved=localStorage.getItem(SIDEBAR_COLLAPSE_KEY);}catch(e){}
+  document.body.classList.toggle('sidebar-collapsed',saved==='1');
+}
+window.addEventListener('resize',()=>{
+  if(window.innerWidth>900){document.body.classList.remove('sidebar-open');}
+  else{document.body.classList.remove('sidebar-collapsed');}
+});
+
 function showSection(id,el){
   if(!MENU_IDS.includes(id))id='dashboard';
   // Halaman kasir.html (window.OMNI_KASIR_PAGE) hanya boleh menampilkan
@@ -1204,6 +1240,7 @@ function showSection(id,el){
   if(id==='pengaturan'){updateInfoPengaturan();if(canManageSettings())renderUserList();}
   if(id==='history')filterHistory();
   applyRolePermissions(); // selalu re-apply setiap ganti section
+  if(window.innerWidth<=900)closeSidebar(); // tutup sidebar off-canvas setelah pilih menu di HP/tablet
 }
 
 // ===== KATEGORI DROPDOWN POPULATE =====
@@ -1364,7 +1401,7 @@ function renderDashboard(){
   const pm={};flattenPenjualan(recent).forEach(r=>{pm[r.prod]=(pm[r.prod]||0)+r.qty});
   const top5=Object.entries(pm).sort((a,b)=>b[1]-a[1]).slice(0,5);
   const maxQ=top5.length?top5[0][1]:1;
-  const eqColors=['#3b82f6','#22d3ee','#34d399','#fbbf24','#f87171'];
+  const eqColors=['#10b981','#2dd4bf','#34d399','#fbbf24','#f87171'];
   const top5El=document.getElementById('top5-bars');
   if(top5El)top5El.innerHTML=top5.length?top5.map(([n,q],i)=>`
     <div class="eq-bar-col">
