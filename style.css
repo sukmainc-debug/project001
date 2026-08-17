@@ -22,6 +22,21 @@
   --radius:14px;--radius-lg:20px;
   --shadow:0 14px 34px -14px rgba(15,23,42,.16),0 2px 8px rgba(15,23,42,.05);
   --shadow-sm:0 4px 14px -6px rgba(15,23,42,.1);
+  /* ===== Sidebar — mode terang: sidebar terang senada topbar (bukan lagi
+     navy gelap yang dipaksakan sama di kedua tema), supaya mode terang
+     & mode gelap terlihat jelas berbeda. ===== */
+  --sidebar-bg-gradient:linear-gradient(195deg,#ffffff,#f7f9fc 55%,#eef1f8);
+  --sidebar-border:rgba(15,23,42,.09);
+  --sidebar-text:#57607a;--sidebar-text-hover:#0f1523;
+  --sidebar-hover-bg:rgba(15,23,42,.05);
+  --sidebar-heading:rgba(15,23,42,.38);
+  --sidebar-logo-border:rgba(15,23,42,.1);
+  --sidebar-title:#0f1523;--sidebar-sub:rgba(15,23,42,.5);
+  --sidebar-user-border:rgba(15,23,42,.1);
+  --sidebar-trigger-bg:rgba(15,23,42,.045);--sidebar-trigger-hover-bg:rgba(15,23,42,.09);
+  --sidebar-name:#0f1523;--sidebar-role:rgba(15,23,42,.5);--sidebar-chev:rgba(15,23,42,.4);
+  --sidebar-role-staff:#1d6fd6;--sidebar-role-kasir:#0e8f4f;
+  --sidebar-menu-shadow:0 14px 34px -14px rgba(15,23,42,.22),0 2px 8px rgba(15,23,42,.08);
 }
 [data-theme="dark"]{
   --outer-bg:#e8eefb;
@@ -36,6 +51,19 @@
   --c-cyan:#22d3ee;--c-pink:#f472b6;--c-violet:#818cf8;--c-gold:#fbbf24;--c-teal:#34d399;
   --shadow:0 20px 45px -18px rgba(0,0,0,.6),0 4px 14px rgba(0,0,0,.35);
   --shadow-sm:0 8px 22px -10px rgba(0,0,0,.5);
+  /* ===== Sidebar — mode gelap: tetap navy-hitam pekat seperti semula ===== */
+  --sidebar-bg-gradient:linear-gradient(195deg,#0b0d13,#161a24 60%,#1a1e2b);
+  --sidebar-border:rgba(255,255,255,.06);
+  --sidebar-text:rgba(255,255,255,.72);--sidebar-text-hover:#fff;
+  --sidebar-hover-bg:rgba(255,255,255,.08);
+  --sidebar-heading:rgba(255,255,255,.4);
+  --sidebar-logo-border:rgba(255,255,255,.12);
+  --sidebar-title:#fff;--sidebar-sub:rgba(255,255,255,.55);
+  --sidebar-user-border:rgba(255,255,255,.12);
+  --sidebar-trigger-bg:rgba(255,255,255,.06);--sidebar-trigger-hover-bg:rgba(255,255,255,.12);
+  --sidebar-name:#fff;--sidebar-role:rgba(255,255,255,.55);--sidebar-chev:rgba(255,255,255,.5);
+  --sidebar-role-staff:#7db8ff;--sidebar-role-kasir:#8fe0a8;
+  --sidebar-menu-shadow:var(--shadow);
 }
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{height:100%}
@@ -49,43 +77,47 @@ body{font-family:'Plus Jakarta Sans',-apple-system,BlinkMacSystemFont,'Segoe UI'
   border-radius:0;overflow:hidden;border:none;box-shadow:none;
   height:100vh;
 }
-.sidebar{position:static;width:230px;flex-shrink:0;background:linear-gradient(195deg,#0b0d13,#161a24 60%,#1a1e2b);
+.sidebar{position:static;width:230px;flex-shrink:0;background:var(--sidebar-bg-gradient);
   border-radius:0;display:flex;flex-direction:column;overflow-y:auto;box-shadow:none;padding:8px;
-  border-right:1px solid rgba(255,255,255,.06);
+  border-right:1px solid var(--sidebar-border);
 }
 .main{flex:1;min-width:0;display:flex;flex-direction:column;background:var(--bg);overflow-y:auto}
 .topbar{background:var(--bg);border-bottom:1px solid var(--border);border-radius:0;margin:0;padding:16px 26px;height:auto;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50;box-shadow:none;gap:12px;flex-wrap:wrap}
 .page-content{padding:22px 26px 34px;max-width:1400px}
 
-/* ===== Sidebar ===== */
-.sidebar-logo{padding:16px 14px 16px;border-bottom:1px solid rgba(255,255,255,.12)}
-.sidebar-logo h1{font-size:16px;font-weight:800;color:#fff;display:flex;align-items:center;gap:8px}
+/* ===== Sidebar =====
+   Sengaja dipisah dari .main lewat sepasang variabel --sidebar-* (didefinisikan
+   di :root & [data-theme="dark"] di bagian atas file) supaya mode terang &
+   mode gelap punya tampilan sidebar yang jelas berbeda, bukan navy gelap yang
+   sama di kedua tema seperti sebelumnya. */
+.sidebar-logo{padding:16px 14px 16px;border-bottom:1px solid var(--sidebar-logo-border)}
+.sidebar-logo h1{font-size:16px;font-weight:800;color:var(--sidebar-title);display:flex;align-items:center;gap:8px}
 .sidebar-logo h1 em{color:var(--accent2);font-style:normal}
-.sidebar-logo small{font-size:10.5px;color:rgba(255,255,255,.55);margin-top:3px;display:block}
+.sidebar-logo small{font-size:10.5px;color:var(--sidebar-sub);margin-top:3px;display:block}
 .sidebar-nav{flex:1;padding:12px 8px}
-.nav-section{font-size:10px;font-weight:700;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:.09em;padding:14px 12px 6px}
-.nav-item{display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:16px;cursor:pointer;color:rgba(255,255,255,.72);font-size:13px;font-weight:500;transition:all .18s;margin-bottom:3px;user-select:none}
+.nav-section{font-size:10px;font-weight:700;color:var(--sidebar-heading);text-transform:uppercase;letter-spacing:.09em;padding:14px 12px 6px}
+.nav-item{display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:16px;cursor:pointer;color:var(--sidebar-text);font-size:13px;font-weight:500;transition:all .18s;margin-bottom:3px;user-select:none}
 .nav-item svg{flex-shrink:0;opacity:.9}
-.nav-item:hover{background:rgba(255,255,255,.08);color:#fff}
+.nav-item:hover{background:var(--sidebar-hover-bg);color:var(--sidebar-text-hover)}
 .nav-item.active{background:linear-gradient(135deg,#3b82f6,#2563eb);color:#fff;font-weight:700;box-shadow:0 8px 20px -6px rgba(59,130,246,.55)}
 .nav-item.active svg{color:#fff}
 .nav-badge{margin-left:auto;background:var(--danger);color:#fff;font-size:10px;padding:1px 7px;border-radius:20px;font-weight:800}
 
 /* ===== Sidebar user / account widget (menu login) ===== */
-.sidebar-user{position:relative;margin:8px 6px 6px;border-top:1px solid rgba(255,255,255,.12);padding-top:8px;flex-shrink:0}
-.su-trigger{width:100%;display:flex;align-items:center;gap:9px;padding:8px;border-radius:16px;border:none;background:rgba(255,255,255,.06);cursor:pointer;text-align:left;font-family:inherit;transition:background .15s}
-.su-trigger:hover{background:rgba(255,255,255,.12)}
+.sidebar-user{position:relative;margin:8px 6px 6px;border-top:1px solid var(--sidebar-user-border);padding-top:8px;flex-shrink:0}
+.su-trigger{width:100%;display:flex;align-items:center;gap:9px;padding:8px;border-radius:16px;border:none;background:var(--sidebar-trigger-bg);cursor:pointer;text-align:left;font-family:inherit;transition:background .15s}
+.su-trigger:hover{background:var(--sidebar-trigger-hover-bg)}
 .su-avatar{flex-shrink:0;width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;text-transform:uppercase}
 .su-info{flex:1;min-width:0}
-.su-name{font-size:12.5px;font-weight:700;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.su-role{font-size:10px;font-weight:700;margin-top:1px;color:rgba(255,255,255,.55)}
+.su-name{font-size:12.5px;font-weight:700;color:var(--sidebar-name);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.su-role{font-size:10px;font-weight:700;margin-top:1px;color:var(--sidebar-role)}
 .su-role.role-owner{color:var(--accent2)}
-.su-role.role-staff{color:#7db8ff}
-.su-role.role-kasir{color:#8fe0a8}
-.su-role.role-viewer{color:rgba(255,255,255,.55)}
-.su-chev{flex-shrink:0;color:rgba(255,255,255,.5);transition:transform .15s}
+.su-role.role-staff{color:var(--sidebar-role-staff)}
+.su-role.role-kasir{color:var(--sidebar-role-kasir)}
+.su-role.role-viewer{color:var(--sidebar-role)}
+.su-chev{flex-shrink:0;color:var(--sidebar-chev);transition:transform .15s}
 .sidebar-user.open .su-chev{transform:rotate(180deg)}
-.su-menu{display:none;position:absolute;left:0;right:0;bottom:calc(100% + 8px);background:var(--surface);border-radius:16px;box-shadow:var(--shadow);padding:6px;border:1px solid var(--border)}
+.su-menu{display:none;position:absolute;left:0;right:0;bottom:calc(100% + 8px);background:var(--surface);border-radius:16px;box-shadow:var(--sidebar-menu-shadow);padding:6px;border:1px solid var(--border)}
 .sidebar-user.open .su-menu{display:block}
 .su-menu-email{font-size:11px;color:var(--text3);padding:8px 10px 6px;word-break:break-all}
 .su-menu-item{width:100%;display:flex;align-items:center;gap:9px;padding:9px 10px;border:none;background:none;border-radius:11px;cursor:pointer;font-family:inherit;font-size:12.5px;font-weight:600;color:var(--text2);text-align:left}
