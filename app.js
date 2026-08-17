@@ -200,20 +200,61 @@ function syncToSupabase(tables){
 // server yang sudah tidak ada lagi di data lokal (mis. karena dihapus user).
 // Dengan urutan ini, kalau ada error di langkah upsert (misal duplikat), proses
 // berhenti SEBELUM ada apa pun yang terhapus -> data di server tetap aman.
+// ===== PAGINASI SUPABASE =====
+// PENYEBAB BUG "data hilang" YANG SEBENARNYA: Supabase/PostgREST membatasi
+// HASIL SETIAP QUERY maksimal 1000 baris secara default -- TANPA ERROR sama
+// sekali kalau dilewati, datanya cuma diam-diam terpotong. Semua query
+// `.select('*')` polos di app ini (loadFromSupabase, dan `select(uniqueCol)`
+// di safeReplace di bawah) sebelumnya TIDAK memakai `.range()`, jadi begitu
+// sebuah tabel (mis. `stok`, `pesanan`, `pesanan_item`) tumbuh lebih dari
+// 1000 baris: (a) hanya 1000 baris pertama yang termuat ke aplikasi, dan
+// (b) safeReplace() -- yang menghapus baris di server yang "tidak ada di
+// data lokal" -- jadi menghapus baris ke-1001 dst dari SERVER walau baris
+// itu sebetulnya valid & masih dipakai, karena baris tsb tidak pernah
+// termuat ke data lokal sama sekali. Ini sebabnya rekonsiliasi (atau sinkron
+// apa pun) bisa menghapus data sungguhan, bukan cuma salah tampil.
+// fetchAllRows() mengambil SEMUA baris lewat `.range()` berulang per batch
+// 1000 baris sampai habis, supaya data lokal & pembanding delete SELALU
+// lengkap berapa pun jumlah barisnya.
+const _SUPA_PAGE_SIZE=1000;
+async function fetchAllRows(table,selectCols,applyExtra){
+  let from=0,out=[];
+  for(;;){
+    let q=supabaseClient.from(table).select(selectCols||'*').range(from,from+_SUPA_PAGE_SIZE-1);
+    if(applyExtra)q=applyExtra(q);
+    const{data,error}=await q;
+    if(error)throw error;
+    out=out.concat(data||[]);
+    if(!data||data.length<_SUPA_PAGE_SIZE)break; // batch terakhir (kurang dari page size) -> selesai
+    from+=_SUPA_PAGE_SIZE;
+  }
+  return out;
+}
 async function safeReplace(table,rows,uniqueCol){
   if(!rows.length){ // memang sengaja dikosongkan semua oleh user
     const{error}=await supabaseClient.from(table).delete().gte('id',0);
     if(error)throw error; return;
   }
-  const{error:upErr}=await supabaseClient.from(table).upsert(rows,{onConflict:uniqueCol});
-  if(upErr)throw upErr;
-  const{data:existing,error:selErr}=await supabaseClient.from(table).select(uniqueCol);
-  if(selErr)throw selErr;
+  // Upsert dikirim per-batch (max 1000 baris/request) supaya tidak kena
+  // batas ukuran payload/baris di sisi Supabase untuk tabel yang besar.
+  for(let i=0;i<rows.length;i+=_SUPA_PAGE_SIZE){
+    const batch=rows.slice(i,i+_SUPA_PAGE_SIZE);
+    const{error:upErr}=await supabaseClient.from(table).upsert(batch,{onConflict:uniqueCol});
+    if(upErr)throw upErr;
+  }
+  // PENTING: pakai fetchAllRows (berpaginasi), BUKAN select() polos --
+  // supaya "existing" selalu lengkap sebelum dipakai menentukan apa yang
+  // dihapus (lihat catatan panjang di atas fungsi ini).
+  const existing=await fetchAllRows(table,uniqueCol);
   const localSet=new Set(rows.map(r=>r[uniqueCol]));
   const toDelete=(existing||[]).map(r=>r[uniqueCol]).filter(v=>!localSet.has(v));
   if(toDelete.length){
-    const{error:delErr}=await supabaseClient.from(table).delete().in(uniqueCol,toDelete);
-    if(delErr)throw delErr;
+    // Hapus per-batch juga (klausa .in() punya batas jumlah nilai yang aman).
+    for(let i=0;i<toDelete.length;i+=_SUPA_PAGE_SIZE){
+      const batch=toDelete.slice(i,i+_SUPA_PAGE_SIZE);
+      const{error:delErr}=await supabaseClient.from(table).delete().in(uniqueCol,batch);
+      if(delErr)throw delErr;
+    }
   }
 }
 async function syncKategori_(){
@@ -259,16 +300,35 @@ function _pesananItemRows(pid,r){
 // permanen dari server walau di layar/local storage masih kelihatan ada.)
 async function _replaceItemsForPesananIds_(pesananIds,newRows){
   if(!pesananIds.length)return;
-  const{data:oldRows,error:selErr}=await supabaseClient.from(TBL_PESANAN_ITEM).select('id').in('pesanan_id',pesananIds);
-  if(selErr)throw selErr;
-  const oldIds=(oldRows||[]).map(r=>r.id);
+  // PENTING: `pesananIds` bisa berjumlah ribuan saat _fullResyncPenjualan
+  // (restore backup / seed / reset pada toko yang datanya sudah besar).
+  // Query `.in('pesanan_id',...)` sendiri juga dipecah per-batch supaya
+  // tidak melebihi batas ukuran query, DAN hasilnya diambil berpaginasi
+  // (fetchAllRows) supaya `oldIds` tidak terpotong di 1000 baris pertama --
+  // kalau terpotong, sisa baris lama tidak ikut terhapus (jadi duplikat),
+  // yang menyesatkan tapi masih tergolong lebih aman daripada versi sebelum
+  // ini (yang berisiko oldIds tidak lengkap lalu insert baru bentrok/dobel
+  // tanpa disadari).
+  const oldIds=[];
+  for(let i=0;i<pesananIds.length;i+=_SUPA_PAGE_SIZE){
+    const idBatch=pesananIds.slice(i,i+_SUPA_PAGE_SIZE);
+    const rows=await fetchAllRows(TBL_PESANAN_ITEM,'id',q=>q.in('pesanan_id',idBatch));
+    rows.forEach(r=>oldIds.push(r.id));
+  }
   if(newRows.length){
-    const{error:insErr}=await supabaseClient.from(TBL_PESANAN_ITEM).insert(newRows);
-    if(insErr)throw insErr; // insert gagal -> berhenti di sini, baris LAMA masih utuh, tidak ada data yang hilang
+    // Insert juga per-batch untuk konsistensi dengan batas 1000 baris/request.
+    for(let i=0;i<newRows.length;i+=_SUPA_PAGE_SIZE){
+      const batch=newRows.slice(i,i+_SUPA_PAGE_SIZE);
+      const{error:insErr}=await supabaseClient.from(TBL_PESANAN_ITEM).insert(batch);
+      if(insErr)throw insErr; // insert gagal -> berhenti di sini, baris LAMA masih utuh, tidak ada data yang hilang
+    }
   }
   if(oldIds.length){
-    const{error:delErr}=await supabaseClient.from(TBL_PESANAN_ITEM).delete().in('id',oldIds);
-    if(delErr)throw delErr; // kalaupun ini gagal, akibatnya cuma duplikat sementara (akan rapi lagi di sync berikutnya) -> BUKAN kehilangan data
+    for(let i=0;i<oldIds.length;i+=_SUPA_PAGE_SIZE){
+      const batch=oldIds.slice(i,i+_SUPA_PAGE_SIZE);
+      const{error:delErr}=await supabaseClient.from(TBL_PESANAN_ITEM).delete().in('id',batch);
+      if(delErr)throw delErr; // kalaupun ini gagal, akibatnya cuma duplikat sementara (akan rapi lagi di sync berikutnya) -> BUKAN kehilangan data
+    }
   }
 }
 async function syncPenjualan_(){
@@ -282,8 +342,7 @@ async function syncPenjualan_(){
     await safeReplace(TBL_PESANAN, headerRows, 'no_pesanan');
     _fullResyncPenjualan=false;_dirtyPesananNo.clear();_deletedPesananNo.clear(); // baru direset SETELAH berhasil
     if(!DB.penjualan.length)return;
-    const{data:idMap,error:idErr}=await supabaseClient.from(TBL_PESANAN).select('id,no_pesanan');
-    if(idErr)throw idErr;
+    const idMap=await fetchAllRows(TBL_PESANAN,'id,no_pesanan'); // berpaginasi -> tidak terpotong di toko besar
     const idByNo={};(idMap||[]).forEach(r=>{idByNo[r.no_pesanan]=r.id});
     const itemRows=[];
     DB.penjualan.forEach(r=>{const pid=idByNo[r.no];if(pid==null)return;itemRows.push(..._pesananItemRows(pid,r))});
@@ -390,20 +449,40 @@ async function syncPenggajian_(){
 // Ambil semua data dari tabel relasional & susun ulang jadi struktur DB di memori
 async function loadFromSupabase(){
   try{
-    const[katRes,mpRes,stokRes,pesananRes,itemRes,biayaRes,hppRes,setRes,pembelianRes,penggajianRes,usersRes]=await Promise.all([
-      supabaseClient.from(TBL_KATEGORI).select('*').order('id'),
-      supabaseClient.from(TBL_MARKETPLACE).select('*').order('id'),
-      supabaseClient.from(TBL_STOK).select('*').order('id'),
-      supabaseClient.from(TBL_PESANAN).select('*').order('id'),
-      supabaseClient.from(TBL_PESANAN_ITEM).select('*').order('id'),
+    // PENTING: pakai fetchAllRows (berpaginasi lewat .range(), lihat definisi
+    // di atas safeReplace) untuk SEMUA tabel yang bisa tumbuh besar seiring
+    // pemakaian (stok, pesanan, pesanan_item, pembelian, penggajian) --
+    // BUKAN `.select('*')` polos. `.select('*')` polos dibatasi Supabase
+    // maksimal 1000 baris per request TANPA ERROR kalau kelebihan, jadi
+    // toko yang sudah punya >1000 SKU/pesanan akan diam-diam kehilangan
+    // sisanya dari tampilan (dan kalau habis itu ada aksi yang menyimpan balik
+    // ke server, sisa data itu malah ikut TERHAPUS di server -- ini akar
+    // masalah "data hilang" yang sebenarnya). Tabel kategori/marketplace/
+    // admin_users pada praktiknya kecil, tapi tetap dipaginasi juga untuk
+    // jaga-jaga & konsistensi.
+    const[katData,mpData,stokData,pesananData,itemData,biayaRes,hppData,setRes,pembelianData,penggajianData,usersData]=await Promise.all([
+      fetchAllRows(TBL_KATEGORI,'*',q=>q.order('id')),
+      fetchAllRows(TBL_MARKETPLACE,'*',q=>q.order('id')),
+      fetchAllRows(TBL_STOK,'*',q=>q.order('id')),
+      fetchAllRows(TBL_PESANAN,'*',q=>q.order('id')),
+      fetchAllRows(TBL_PESANAN_ITEM,'*',q=>q.order('id')),
       supabaseClient.from(TBL_BIAYA).select('*').eq('id',1).maybeSingle(),
-      supabaseClient.from(TBL_HPP_PRODUK).select('*'),
+      fetchAllRows(TBL_HPP_PRODUK,'*'),
       supabaseClient.from(TBL_PENGATURAN).select('*').eq('id',1).maybeSingle(),
-      supabaseClient.from(TBL_PEMBELIAN).select('*').order('id'),
-      supabaseClient.from(TBL_PENGGAJIAN).select('*').order('id'),
-      supabaseClient.from('admin_users').select('id,nama,email'),
+      fetchAllRows(TBL_PEMBELIAN,'*',q=>q.order('id')),
+      fetchAllRows(TBL_PENGGAJIAN,'*',q=>q.order('id')),
+      // admin_users SENGAJA ditangani terpisah (.catch) dan TIDAK ikut
+      // Promise.all yang sama gagalnya seperti tabel lain: role selain
+      // Owner biasanya memang tidak diizinkan RLS membaca tabel ini, dan itu
+      // BUKAN alasan untuk menggagalkan pemuatan seluruh data toko (stok,
+      // pesanan, dst). Kalau gagal, cukup daftar "diinput oleh" kosong.
+      fetchAllRows('admin_users','id,nama,email').catch(e=>{console.warn('Gagal memuat admin_users (non-fatal):',e.message);return[]}),
     ]);
-    const errs=[katRes,mpRes,stokRes,pesananRes,itemRes,biayaRes,hppRes,setRes,pembelianRes,penggajianRes].map(r=>r.error).filter(Boolean);
+    // fetchAllRows sudah melempar (throw) kalau ada error di tengah paginasi,
+    // jadi kalau sampai sini tanpa exception, semua sudah lengkap. Hanya
+    // biayaRes/setRes (maybeSingle, bukan lewat fetchAllRows) yang perlu
+    // dicek error secara terpisah.
+    const errs=[biayaRes,setRes].map(r=>r.error).filter(Boolean);
     if(errs.length){console.warn('Gagal memuat dari Supabase:',errs[0].message);updateSyncBadge(false,errs[0].message);return null}
 
     // Peta user_id -> nama (fallback email), dipakai untuk menampilkan siapa
@@ -411,21 +490,21 @@ async function loadFromSupabase(){
     // Laporan Penjualan). Kalau gagal diambil (mis. tidak ada akses), biarkan
     // kosong saja — tidak menggagalkan pemuatan data lain.
     const usersMap={};
-    (usersRes&&usersRes.data||[]).forEach(u=>{usersMap[u.id]=u.nama&&u.nama.trim()?u.nama:u.email});
+    (usersData||[]).forEach(u=>{usersMap[u.id]=u.nama&&u.nama.trim()?u.nama:u.email});
 
-    const kategori=(katRes.data||[]).map(k=>({nama:k.nama,color:k.color}));
-    const marketplace=(mpRes.data||[]).map(m=>({nama:m.nama,color:m.color}));
-    const stok=(stokRes.data||[]).map(s=>({sku:s.sku,prod:s.produk,varian:s.varian,kat:s.kategori,stok:s.stok,terjual:s.terjual,hpp:Number(s.hpp)||0,created_at:s.created_at||null,updatedAt:s.updated_at||s.created_at||null}));
+    const kategori=(katData||[]).map(k=>({nama:k.nama,color:k.color}));
+    const marketplace=(mpData||[]).map(m=>({nama:m.nama,color:m.color}));
+    const stok=(stokData||[]).map(s=>({sku:s.sku,prod:s.produk,varian:s.varian,kat:s.kategori,stok:s.stok,terjual:s.terjual,hpp:Number(s.hpp)||0,created_at:s.created_at||null,updatedAt:s.updated_at||s.created_at||null}));
 
     // Kelompokkan baris pesanan_item berdasarkan pesanan_id, lalu gabungkan
     // dengan header masing-masing dari tabel `pesanan` -> jadi 1 pesanan (bisa
     // berisi banyak barang) per elemen array `penjualan`.
     const itemsByPesanan={};
-    (itemRes.data||[]).forEach(it=>{
+    (itemData||[]).forEach(it=>{
       if(!itemsByPesanan[it.pesanan_id])itemsByPesanan[it.pesanan_id]=[];
       itemsByPesanan[it.pesanan_id].push({prod:it.produk,varian:it.varian||'',kat:it.kategori||'Lainnya',qty:it.qty,harga:Number(it.harga_satuan)||0,subtotal:Number(it.subtotal)||0,hpp:it.hpp_saat_transaksi!=null?Number(it.hpp_saat_transaksi):null});
     });
-    const penjualan=(pesananRes.data||[]).map(r=>{
+    const penjualan=(pesananData||[]).map(r=>{
       const items=itemsByPesanan[r.id]||[];
       const order={no:r.no_pesanan,tanggal:r.tanggal,_date:r.tgl_iso,mp:r.marketplace,status:r.status,
         biayaAdmin:r.biaya_admin!=null?Number(r.biaya_admin):null,biayaTambahan:r.biaya_tambahan!=null?Number(r.biaya_tambahan):null,
@@ -435,8 +514,8 @@ async function loadFromSupabase(){
       return order;
     });
 
-    const mp_fee={};(mpRes.data||[]).forEach(m=>mp_fee[m.nama]=Number(m.fee_persen));
-    const hpp_per_produk={};(hppRes.data||[]).forEach(h=>hpp_per_produk[h.produk]=Number(h.hpp));
+    const mp_fee={};(mpData||[]).forEach(m=>mp_fee[m.nama]=Number(m.fee_persen));
+    const hpp_per_produk={};(hppData||[]).forEach(h=>hpp_per_produk[h.produk]=Number(h.hpp));
     const b=biayaRes.data||{};
     const biaya={
       mp_fee,
@@ -453,8 +532,8 @@ async function loadFromSupabase(){
     const s=setRes.data||{};
     const pengaturan={nama:s.nama_toko||'Toko Saya',pemilik:s.pemilik||'',hp:s.hp||'',batasStok:s.batas_stok!=null?s.batas_stok:10,logo:s.logo||''};
 
-    const pembelian=(pembelianRes.data||[]).map(r=>({kode:r.kode,tanggal:r.tanggal,_date:r.tgl_iso,supplier:r.supplier||'',item:r.item||'',qty:r.qty,satuan:r.satuan||'pcs',hargaSatuan:Number(r.harga_satuan)||0,total:Number(r.total)||0,catatan:r.catatan||''}));
-    const penggajian=(penggajianRes.data||[]).map(r=>({kode:r.kode,tanggal:r.tanggal,_date:r.tgl_iso,namaKaryawan:r.nama_karyawan||'',jabatan:r.jabatan||'',periode:r.periode||'',nominal:Number(r.nominal)||0,catatan:r.catatan||''}));
+    const pembelian=(pembelianData||[]).map(r=>({kode:r.kode,tanggal:r.tanggal,_date:r.tgl_iso,supplier:r.supplier||'',item:r.item||'',qty:r.qty,satuan:r.satuan||'pcs',hargaSatuan:Number(r.harga_satuan)||0,total:Number(r.total)||0,catatan:r.catatan||''}));
+    const penggajian=(penggajianData||[]).map(r=>({kode:r.kode,tanggal:r.tanggal,_date:r.tgl_iso,namaKaryawan:r.nama_karyawan||'',jabatan:r.jabatan||'',periode:r.periode||'',nominal:Number(r.nominal)||0,catatan:r.catatan||''}));
 
     updateSyncBadge(true);
     return{kategori,marketplace,stok,penjualan,biaya,pengaturan,pembelian,penggajian,lastUpdate:new Date().toISOString()};
