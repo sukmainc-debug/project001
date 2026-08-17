@@ -2594,6 +2594,50 @@ function renderLaporan(){
 
   renderAsetStokChart();
   renderTrenOmzetChart(start,end);
+
+  // ===== DAFTAR RINCIAN PESANAN (khusus tampilan cetak) =====
+  // Pakai `dalamRentang` yang SAMA dengan basis perhitungan seluruh kartu &
+  // grafik di atas (sudah difilter periode aktif & status bukan "Dibatalkan"),
+  // supaya rincian ini benar-benar bisa dicocokkan dengan angka ringkasannya
+  // -- diurutkan tanggal terbaru dulu, sama seperti tabel Penjualan di menu utama.
+  const ordersEl=document.getElementById('fin-orders-print');
+  if(ordersEl){
+    const terurut=[...dalamRentang].sort((a,b)=>new Date(b._date)-new Date(a._date));
+    const baris=terurut.map(r=>{
+      const laba=hitungLabaOrder(r);
+      const namaProdukPolos=(r.items||[]).map(it=>it.prod+(it.varian?' ('+it.varian+')':'')).join(', ')||'–';
+      return `<tr>
+        <td class="fin-ord-mono">${esc(r.no)}</td>
+        <td>${esc(r.tanggal)}</td>
+        <td>${esc(r.mp)}</td>
+        <td class="fin-ord-prod">${esc(namaProdukPolos)}</td>
+        <td style="text-align:center">${hitungQtyItems(r.items)}</td>
+        <td style="text-align:right">${fmtRp(r.total)}</td>
+        <td style="text-align:right" class="sensitive-col">${fmtRp(laba)}</td>
+      </tr>`;
+    }).join('');
+    const totalOmzetList=terurut.reduce((a,r)=>a+(r.total||0),0);
+    const totalLabaList=terurut.reduce((a,r)=>a+hitungLabaOrder(r),0);
+    ordersEl.innerHTML=terurut.length?`
+      <div class="fin-stmt-title">RINCIAN PESANAN</div>
+      <div class="fin-stmt-period">Periode: ${label} — ${terurut.length} pesanan</div>
+      <table class="fin-orders-table">
+        <thead><tr>
+          <th>No. Pesanan</th><th>Tanggal</th><th>Marketplace</th><th>Produk</th>
+          <th style="text-align:center">Qty</th><th style="text-align:right">Total</th>
+          <th style="text-align:right" class="sensitive-col">Laba</th>
+        </tr></thead>
+        <tbody>${baris}</tbody>
+        <tfoot><tr>
+          <td colspan="5">Total (${terurut.length} pesanan)</td>
+          <td style="text-align:right">${fmtRp(totalOmzetList)}</td>
+          <td style="text-align:right" class="sensitive-col">${fmtRp(totalLabaList)}</td>
+        </tr></tfoot>
+      </table>`:`
+      <div class="fin-stmt-title">RINCIAN PESANAN</div>
+      <div class="fin-stmt-period">Periode: ${label}</div>
+      <div style="font-size:11px;color:#888">Tidak ada pesanan pada periode ini.</div>`;
+  }
 }
 
 // Bucket bulan yang akan ditampilkan grafik "Tren Omzet" — mengikuti
