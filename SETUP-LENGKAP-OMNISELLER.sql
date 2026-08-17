@@ -166,15 +166,24 @@ create table if not exists public.admin_users (
 alter table public.admin_users enable row level security;
 
 create or replace function public.my_role()
-returns text language sql stable security definer as $$
+returns text language sql stable security definer set search_path = '' as $$
   select role from public.admin_users where id = auth.uid();
 $$;
+-- Fungsi ini SENGAJA tetap bisa dipanggil siapa pun yang sudah login
+-- ('authenticated') karena dipakai di DALAM semua aturan RLS di seluruh
+-- database (mis. "role_write for all using (public.my_role() in (...))").
+-- Kalau akses ini dicabut dari 'authenticated', SELURUH aturan RLS aplikasi
+-- akan gagal dan tidak ada satu pun data yang bisa dibaca/ditulis. Yang
+-- dipersempit hanya akses dari 'anon' (belum login) — tidak dibutuhkan sama
+-- sekali oleh aplikasi ini, karena semua menu mewajibkan login dulu.
+revoke execute on function public.my_role() from public;
+grant execute on function public.my_role() to authenticated;
 
 -- Trigger: user PERTAMA yang Sign Up otomatis jadi 'owner'; berikutnya 'pending'.
 -- Karena ini instalasi baru (belum ada akun sama sekali), Sign Up pertama Anda
 -- di aplikasi SETELAH script ini jalan = otomatis jadi Owner.
 create or replace function public.handle_new_admin_user()
-returns trigger language plpgsql security definer as $$
+returns trigger language plpgsql security definer set search_path = '' as $$
 begin
   insert into public.admin_users (id, email, nama, role)
   values (
@@ -186,6 +195,13 @@ begin
   return new;
 end;
 $$;
+-- Fungsi ini HANYA boleh dipicu otomatis oleh trigger "on_auth_user_created"
+-- di bawah (saat ada user baru Sign Up), TIDAK PERNAH dipanggil langsung oleh
+-- siapa pun. Mencabut izin EXECUTE dari anon/authenticated di sini TIDAK
+-- mengganggu triggernya sama sekali (trigger tetap jalan otomatis oleh mesin
+-- database), tapi menutup jalur endpoint publik /rpc/handle_new_admin_user
+-- yang sebelumnya bisa dipanggil siapa saja dari luar.
+revoke execute on function public.handle_new_admin_user() from public;
 
 drop trigger if exists on_auth_user_created on auth.users;
 create trigger on_auth_user_created
@@ -313,7 +329,7 @@ alter table public.admin_users add constraint admin_users_role_check
   check (role in ('owner','staff','kasir','viewer','pending'));
 
 create or replace function public.handle_new_admin_user()
-returns trigger language plpgsql security definer as $$
+returns trigger language plpgsql security definer set search_path = '' as $$
 begin
   insert into public.admin_users (id, email, nama, role)
   values (
@@ -325,6 +341,7 @@ begin
   return new;
 end;
 $$;
+revoke execute on function public.handle_new_admin_user() from public;
 
 -- Tabel transaksi pesanan: owner, staff, DAN kasir boleh baca+tulis
 do $$
@@ -456,7 +473,7 @@ end $$;
 -- =========================================================================
 
 create or replace function public.set_audit_fields()
-returns trigger language plpgsql security definer as $$
+returns trigger language plpgsql security definer set search_path = '' as $$
 begin
   if TG_OP = 'INSERT' then
     new.created_by := auth.uid();
@@ -468,6 +485,10 @@ begin
   return new;
 end;
 $$;
+-- Sama seperti handle_new_admin_user() di atas: fungsi ini HANYA boleh
+-- dipicu trigger "trg_audit_fields" di bawah, tidak pernah dipanggil
+-- langsung. Cabut izin EXECUTE publiknya, trigger tetap jalan normal.
+revoke execute on function public.set_audit_fields() from public;
 
 do $$
 declare t text;
