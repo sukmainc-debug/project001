@@ -2643,9 +2643,9 @@ function renderLaporan(){
   if(judulEl)judulEl.textContent='Ringkasan Keuangan — '+label;
 
   const pMeta=document.getElementById('fin-print-periode');
-  if(pMeta)pMeta.innerHTML='Periode: <b>'+esc(label)+'</b>';
+  if(pMeta)pMeta.textContent=label;
   const tMeta=document.getElementById('fin-print-tanggal');
-  if(tMeta)tMeta.textContent='Dicetak: '+new Date().toLocaleString('id-ID',{dateStyle:'long',timeStyle:'short'});
+  if(tMeta)tMeta.textContent=new Date().toLocaleString('id-ID',{dateStyle:'long',timeStyle:'short'});
   const toko=document.getElementById('fin-print-toko');
   if(toko)toko.textContent=DB.pengaturan.nama||'Toko Saya';
   const printLogo=document.getElementById('fin-print-logo');
@@ -2665,7 +2665,7 @@ function renderLaporan(){
   }
   // Sub-judul di bawah judul dokumen resmi "LAPORAN KEUANGAN".
   const docSubEl=document.getElementById('fin-print-doctitle-sub');
-  if(docSubEl)docSubEl.textContent='Untuk Periode '+label;
+  if(docSubEl)docSubEl.textContent='LAPORAN KEUANGAN — UNTUK PERIODE '+label.toUpperCase();
 
   // Baris "Kota, tanggal" di atas kolom tanda tangan pada footer cetak,
   // gaya penutup surat/laporan resmi Indonesia.
@@ -2723,7 +2723,7 @@ function renderLaporan(){
       </tr>`;
     };
     stmtEl.innerHTML=`
-      <div class="fin-stmt-title">LAPORAN LABA RUGI</div>
+      <div class="fin-stmt-title">2. Laporan Laba Rugi Komprehensif</div>
       <div class="fin-stmt-period">Periode: ${label}</div>
       <table class="fin-stmt-table">
         <thead><tr><th>Keterangan</th><th>Jumlah (Rp)</th></tr></thead>
@@ -2800,7 +2800,7 @@ function renderLaporan(){
     const totalOmzetList=terurut.reduce((a,r)=>a+(r.total||0),0);
     const totalLabaList=terurut.reduce((a,r)=>a+hitungLabaOrder(r),0);
     ordersEl.innerHTML=terurut.length?`
-      <div class="fin-stmt-title">RINCIAN PESANAN</div>
+      <div class="fin-stmt-title">Lampiran — Rincian Pesanan</div>
       <div class="fin-stmt-period">Periode: ${label} — ${terurut.length} pesanan</div>
       <table class="fin-orders-table">
         <thead><tr>
@@ -2815,9 +2815,39 @@ function renderLaporan(){
           <td style="text-align:right" class="sensitive-col">${fmtRp(totalLabaList)}</td>
         </tr></tfoot>
       </table>`:`
-      <div class="fin-stmt-title">RINCIAN PESANAN</div>
+      <div class="fin-stmt-title">Lampiran — Rincian Pesanan</div>
       <div class="fin-stmt-period">Periode: ${label}</div>
       <div style="font-size:11px;color:#888">Tidak ada pesanan pada periode ini.</div>`;
+  }
+
+  // ===== CATATAN RINGKAS EKSEKUTIF (khusus tampilan cetak) =====
+  // 3 poin naratif singkat yang diturunkan otomatis dari data periode
+  // terpilih (bukan teks statis) — meniru bagian "Catatan Ringkas
+  // Eksekutif" pada laporan keuangan korporat: kanal penyumbang omzet
+  // terbesar, komposisi/porsi biaya terbesar, dan catatan margin bersih.
+  const notesEl=document.getElementById('fin-notes-print');
+  if(notesEl){
+    const poin=[];
+    const mpSortedNotes=MP_LIST.map(m=>({m,v:mpRev[m]||0})).filter(x=>x.v>0).sort((a,b)=>b.v-a.v);
+    if(mpSortedNotes.length){
+      const top=mpSortedNotes[0];
+      const pct=to>0?(top.v/to*100).toFixed(1):0;
+      poin.push(`Kinerja Penjualan: Kontribusi omzet terbesar periode ini berasal dari kanal <b>${esc(top.m)}</b>, menyumbang sekitar <b>${pct}%</b> dari total omzet (${fmtRp(top.v)}).`);
+    }
+    const komponenBiaya=[
+      {l:'Harga Pokok Penjualan (HPP)',v:th},
+      {l:'Biaya Admin Marketplace',v:tf},
+      {l:'Ongkir & Biaya Lain-lain',v:te},
+      {l:'Pengeluaran Operasional (Pembelian & Gaji)',v:totalOpex},
+    ].sort((a,b)=>b.v-a.v);
+    if(to>0&&komponenBiaya[0].v>0){
+      const bp=komponenBiaya[0];
+      poin.push(`Struktur Biaya: Komponen biaya terbesar pada periode ini adalah <b>${esc(bp.l)}</b> sebesar ${fmtRp(bp.v)}, setara <b>${(bp.v/to*100).toFixed(1)}%</b> dari total omzet.`);
+    }
+    poin.push(`Profitabilitas: Margin bersih periode ini tercatat <b>${margin.toFixed(1)}%</b>, dengan estimasi laba bersih sebesar <b>${fmtRp(tl)}</b> dari total ${dalamRentang.length} pesanan yang diproses.`);
+    notesEl.innerHTML=`
+      <div class="fin-stmt-title">3. Catatan Ringkas Eksekutif</div>
+      <ul class="fin-notes-list">${poin.map(p=>`<li>${p}</li>`).join('')}</ul>`;
   }
 }
 
