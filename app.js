@@ -1849,25 +1849,29 @@ function rekonsiliasiStok(){
   // masih ada & aman di Data Penjualan. Ini penyebab paling umum kesan
   // "data penjualan hilang" setelah rekonsiliasi. Sekarang item yang tidak
   // cocok DIKUMPULKAN & DILAPORKAN ke user, bukan cuma dibuang diam-diam.
-  const takCocok={}; // key: "produk|varian" -> total qty yang tidak ketemu SKU-nya
+  const takCocok={}; // key: "produk|varian" -> {qty, orders:Set(no_pesanan)} yang tidak ketemu SKU-nya
   DB.penjualan.forEach(order=>{
     if(!isStatusAktif(order.status))return;
     (order.items||[]).forEach(item=>{
       const si=cariStok(item.prod,item.varian);
       if(!si){
         const key=(item.prod||'–')+(item.varian?' · '+item.varian:'');
-        takCocok[key]=(takCocok[key]||0)+(item.qty||0);
+        if(!takCocok[key])takCocok[key]={qty:0,orders:new Set()};
+        takCocok[key].qty+=(item.qty||0);
+        takCocok[key].orders.add(order.no||'(tanpa no.)');
         return;
       }
       terjualBaru[si.sku]=(terjualBaru[si.sku]||0)+(item.qty||0);
     });
   });
   let jumlahDiperbaiki=0;
+  const skuDiperbaiki=[]; // {sku,prod,varian,dari,ke} SKU yg "terjual"-nya berubah, utk info di menu peringatan
   DB.stok.forEach(si=>{
     const targetTerjual=terjualBaru[si.sku]||0;
     const selisih=targetTerjual-(si.terjual||0); // positif = ada penjualan yg belum pernah memotong stok
     if(selisih!==0){
       jumlahDiperbaiki++;
+      skuDiperbaiki.push({sku:si.sku,prod:si.prod,varian:si.varian,dari:si.terjual||0,ke:targetTerjual});
       si.stok=Math.max(0,(si.stok||0)-selisih);
       si.terjual=targetTerjual;
       si.updatedAt=new Date().toISOString();
@@ -1875,15 +1879,32 @@ function rekonsiliasiStok(){
   });
   saveDB(['stok']);filteredStok=[...DB.stok];renderStokTable();renderDashboard();
   if(jumlahDiperbaiki)catatAktivitas('Rekonsiliasi','Stok Produk',`${jumlahDiperbaiki} SKU disesuaikan`);
-  const daftarTakCocok=Object.entries(takCocok).sort((a,b)=>b[1]-a[1]);
+  const daftarTakCocok=Object.entries(takCocok).sort((a,b)=>b[1].qty-a[1].qty);
   const res=document.getElementById('rekonsiliasi-result');
   if(res){
-    let html=jumlahDiperbaiki?`<div class="alert alert-success">✅ Selesai. <strong>${jumlahDiperbaiki} SKU</strong> disesuaikan agar "terjual" cocok dengan Data Penjualan.</div>`:`<div class="alert alert-success">✅ Semua SKU sudah sinkron, tidak ada yang perlu diperbaiki.</div>`;
+    let html='';
+    if(jumlahDiperbaiki){
+      // Info SKU yang berubah, termasuk SKU-nya sendiri, supaya user tahu
+      // PERSIS SKU mana saja yang "bermasalah" (angka terjual/stoknya disesuaikan).
+      html+=`<div class="alert alert-success">✅ Selesai. <strong>${jumlahDiperbaiki} SKU</strong> disesuaikan agar "terjual" cocok dengan Data Penjualan:<ul style="margin:6px 0 0 18px;padding:0">`+
+        skuDiperbaiki.slice(0,30).map(s=>`<li><code>${esc(s.sku)}</code> — ${esc(s.prod)}${s.varian?' · '+esc(s.varian):''} (terjual ${s.dari} → ${s.ke})</li>`).join('')+
+        (skuDiperbaiki.length>30?`<li>...dan ${skuDiperbaiki.length-30} SKU lainnya</li>`:'')+
+        `</ul></div>`;
+    }else{
+      html+=`<div class="alert alert-success">✅ Semua SKU sudah sinkron, tidak ada yang perlu diperbaiki.</div>`;
+    }
     if(daftarTakCocok.length){
+      // Setiap baris sekarang menyertakan SKU yang dicari (tidak ketemu) dan
+      // daftar No. Pesanan di Data Penjualan yang memuat produk/varian itu,
+      // supaya user bisa langsung buka pesanan mana saja yang bermasalah.
       html+=`<div class="alert alert-warning" style="margin-top:8px">⚠️ <strong>${daftarTakCocok.length} nama produk/varian</strong> di Data Penjualan tidak cocok dengan SKU manapun di Stok Gudang saat ini, sehingga qty-nya TIDAK ikut dihitung ke "terjual" (data pesanannya sendiri tetap aman &amp; tidak dihapus):<ul style="margin:6px 0 0 18px;padding:0">`+
-        daftarTakCocok.slice(0,30).map(([k,q])=>`<li>${k} — ${q} pcs</li>`).join('')+
-        (daftarTakCocok.length>30?`<li>...dan ${daftarTakCocok.length-30} lainnya</li>`:'')+
-        `</ul><div style="margin-top:6px">Perbaiki dengan menyamakan nama Produk/Varian di Data Penjualan dengan nama di Stok Gudang (atau tambahkan SKU yang sesuai), lalu jalankan Rekonsiliasi lagi.</div></div>`;
+        daftarTakCocok.slice(0,30).map(([k,v])=>{
+          const orderList=[...v.orders];
+          const noText=orderList.slice(0,8).map(no=>`<code>${esc(no)}</code>`).join(', ')+(orderList.length>8?` <span style="opacity:.7">+${orderList.length-8} lainnya</span>`:'');
+          return `<li><strong>${esc(k)}</strong> — ${v.qty} pcs, SKU tidak ditemukan. No. Pesanan: ${noText}</li>`;
+        }).join('')+
+        (daftarTakCocok.length>30?`<li>...dan ${daftarTakCocok.length-30} produk/varian lainnya</li>`:'')+
+        `</ul><div style="margin-top:6px">Perbaiki dengan menyamakan nama Produk/Varian pada No. Pesanan di atas dengan nama di Stok Gudang (atau tambahkan SKU yang sesuai), lalu jalankan Rekonsiliasi lagi.</div></div>`;
     }
     res.innerHTML=html;
   }
