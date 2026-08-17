@@ -630,6 +630,7 @@ a:focus-visible,button:focus-visible,.btn:focus-visible,.nav-item:focus-visible,
 .fin-print-header{display:none}
 .fin-print-footer{display:none}
 .fin-statement-print{display:none}
+.fin-orders-print{display:none}
 .print-only{display:none}
 .fin-print-tip{font-size:11.5px;color:var(--text3);background:var(--surface2);border:1px dashed var(--border2);border-radius:10px;padding:9px 12px;margin-top:2px;line-height:1.5}
 
@@ -718,6 +719,29 @@ a:focus-visible,button:focus-visible,.btn:focus-visible,.nav-item:focus-visible,
   .fin-mini-table th{text-align:left;font-size:9.5px;text-transform:uppercase;letter-spacing:.04em;color:#888;font-weight:700;padding:4px 3px;border-bottom:1px solid #999}
   .fin-mini-table td{padding:4px 3px;border-bottom:1px solid #eee;color:#222}
   .fin-mini-table tr.fin-mini-total td{border-top:1.5px solid #999;border-bottom:none;font-weight:800;padding-top:6px}
+
+  /* ===== RINCIAN PESANAN (lampiran daftar tiap No. Pesanan) ===== */
+  .fin-orders-print{
+    display:block!important;margin-bottom:20px;border:1px solid #ccc;border-radius:6px;
+    padding:16px 18px;background:#fff!important;
+    /* SENGAJA TIDAK break-inside:avoid -- lampiran ini bisa berisi puluhan/
+       ratusan pesanan, jadi harus boleh terpotong & lanjut ke halaman
+       berikutnya (beda dari kartu ringkas & statement laba-rugi di atas
+       yang selalu pendek dan wajib utuh dalam 1 halaman). */
+  }
+  .fin-orders-table{width:100%;border-collapse:collapse;font-size:10px;margin-top:10px}
+  .fin-orders-table thead{display:table-header-group} /* header tabel otomatis diulang tiap ganti halaman cetak */
+  .fin-orders-table tr{break-inside:avoid;page-break-inside:avoid} /* 1 baris pesanan tidak terpotong di tengah */
+  .fin-orders-table th{
+    text-align:left;font-size:9px;text-transform:uppercase;letter-spacing:.03em;color:#666;
+    font-weight:800;padding:5px 4px;border-bottom:1.5px solid #333;background:#f4f5f8!important;
+    -webkit-print-color-adjust:exact;print-color-adjust:exact;
+  }
+  .fin-orders-table td{padding:4px;border-bottom:1px solid #eee;color:#222;vertical-align:top}
+  .fin-orders-table .fin-ord-mono{font-family:'Courier New',monospace;font-size:9.5px;white-space:nowrap}
+  .fin-orders-table .fin-ord-prod{max-width:220px}
+  .fin-orders-table tfoot td{border-top:2px solid #111;border-bottom:none;font-weight:800;padding-top:7px}
+  .fin-orders-table tbody tr:nth-child(even){background:#fafafa!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
 
   /* Grid 2 kolom diubah jadi 1 kolom saat dicetak — chart jauh lebih
      terbaca di kertas kalau full-width daripada berdempetan 2 kolom sempit. */
