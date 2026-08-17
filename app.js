@@ -2606,7 +2606,7 @@ function renderLaporan(){
   if(judulEl)judulEl.textContent='Ringkasan Keuangan — '+label;
 
   const pMeta=document.getElementById('fin-print-periode');
-  if(pMeta)pMeta.textContent='Periode: '+label;
+  if(pMeta)pMeta.innerHTML='Periode: <b>'+esc(label)+'</b>';
   const tMeta=document.getElementById('fin-print-tanggal');
   if(tMeta)tMeta.textContent='Dicetak: '+new Date().toLocaleString('id-ID',{dateStyle:'long',timeStyle:'short'});
   const toko=document.getElementById('fin-print-toko');
@@ -2616,6 +2616,26 @@ function renderLaporan(){
     if(DB.pengaturan.logo){printLogo.src=DB.pengaturan.logo;printLogo.style.display='block'}
     else{printLogo.style.display='none'}
   }
+  // Baris pemilik/kontak di bawah nama toko pada kop — detail identitas
+  // tambahan yang lazim ada di kop laporan keuangan perusahaan.
+  const ownerEl=document.getElementById('fin-print-owner');
+  if(ownerEl){
+    const bits=[];
+    if(DB.pengaturan.pemilik)bits.push('Pemilik: '+DB.pengaturan.pemilik);
+    if(DB.pengaturan.hp)bits.push('Kontak: '+DB.pengaturan.hp);
+    ownerEl.textContent=bits.join('  ·  ');
+    ownerEl.style.display=bits.length?'block':'none';
+  }
+  // Sub-judul di bawah judul dokumen resmi "LAPORAN KEUANGAN".
+  const docSubEl=document.getElementById('fin-print-doctitle-sub');
+  if(docSubEl)docSubEl.textContent='Untuk Periode '+label;
+
+  // Baris "Kota, tanggal" di atas kolom tanda tangan pada footer cetak,
+  // gaya penutup surat/laporan resmi Indonesia.
+  const signDateEl=document.getElementById('fin-print-signdate');
+  if(signDateEl)signDateEl.textContent=new Date().toLocaleDateString('id-ID',{day:'numeric',month:'long',year:'numeric'});
+  const signOwnerEl=document.getElementById('fin-print-sign-owner');
+  if(signOwnerEl)signOwnerEl.textContent=DB.pengaturan.pemilik?'( '+DB.pengaturan.pemilik+' )':'';
 
   const rowsEl=document.getElementById('keuangan-rows');
   const{to,tl:tlKotor,tf,te,th}=hitungRingkasPeriode(dalamRentangFlat);
@@ -2669,6 +2689,7 @@ function renderLaporan(){
       <div class="fin-stmt-title">LAPORAN LABA RUGI</div>
       <div class="fin-stmt-period">Periode: ${label}</div>
       <table class="fin-stmt-table">
+        <thead><tr><th>Keterangan</th><th>Jumlah (Rp)</th></tr></thead>
         <tbody>
           ${baris('Pendapatan (Total Omzet Penjualan)',to)}
           ${baris('Harga Pokok Penjualan (HPP)',th,{neg:true,indent:true})}
