@@ -643,8 +643,8 @@ async function refreshFromServerIfIdle(){
   DB=cloud;
   localStorage.setItem('omniseller_v2',JSON.stringify(DB));
   refreshMpGlobals();
-  filteredStok=[...DB.stok];filteredPembelian=[...DB.pembelian];filteredPenggajian=[...DB.penggajian];
-  renderDashboard();filterJual();renderStokTable();filterPembelian();filterPenggajian();
+  filteredPembelian=[...DB.pembelian];filteredPenggajian=[...DB.penggajian];
+  renderDashboard();filterJual();filterStok();filterPembelian();filterPenggajian();
 }
 function aktifkanAutoRefresh(){
   document.addEventListener('visibilitychange',()=>{if(!document.hidden)refreshFromServerIfIdle()});
