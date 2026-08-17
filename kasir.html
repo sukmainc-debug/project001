@@ -527,12 +527,19 @@
           <div>
             <div class="fin-print-toko" id="fin-print-toko">Toko Saya</div>
             <div class="fin-print-sub">Laporan Keuangan — OmniSeller</div>
+            <div class="fin-print-owner" id="fin-print-owner"></div>
           </div>
         </div>
         <div class="fin-print-meta">
           <div id="fin-print-periode">Periode: –</div>
           <div id="fin-print-tanggal">Dicetak: –</div>
         </div>
+      </div>
+      <!-- Judul dokumen resmi, hanya tampil saat dicetak — memberi kesan
+           "dokumen laporan keuangan" yang jelas, terpisah dari kop toko. -->
+      <div class="fin-print-doctitle print-only" id="fin-print-doctitle">
+        <div class="fin-print-doctitle-main">Laporan Keuangan</div>
+        <div class="fin-print-doctitle-sub" id="fin-print-doctitle-sub">Untuk Periode –</div>
       </div>
 
       <!-- LAPORAN LABA RUGI (format akuntansi) — HANYA muncul saat dicetak. -->
@@ -603,8 +610,9 @@
            tangan, supaya file cetak terlihat seperti laporan resmi. -->
       <div class="fin-print-footer" id="fin-print-footer">
         <div class="fin-print-disclaimer">Laporan ini dibuat otomatis oleh sistem OmniSeller Dashboard berdasarkan data yang tercatat. Angka Laba Bersih &amp; Nilai Aset Stok bersifat estimasi.</div>
+        <div class="fin-print-signdate" id="fin-print-signdate">–</div>
         <div class="fin-print-sign">
-          <div class="fin-print-sign-box"><div class="fin-print-sign-line"></div><span>Dibuat oleh</span></div>
+          <div class="fin-print-sign-box"><div class="fin-print-sign-line"></div><span>Dibuat oleh</span><div class="fin-print-sign-name" id="fin-print-sign-owner"></div></div>
           <div class="fin-print-sign-box"><div class="fin-print-sign-line"></div><span>Diketahui oleh</span></div>
         </div>
       </div>
