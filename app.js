@@ -614,6 +614,13 @@ async function initApp(){
   renderStokTable();
   populateKatDropdowns();
   populateMpDropdowns();
+  // Ganti SELURUH dropdown sort/filter (<select> native) jadi komponen
+  // custom rounded (lihat blok "CUSTOM SELECT" di bawah) — dipanggil
+  // SETELAH populate di atas supaya opsi Marketplace/Kategori sudah terisi
+  // saat pertama kali dibangun (walau sebenarnya panel selalu dibangun
+  // ulang live setiap dibuka, jadi urutan ini bukan syarat mutlak).
+  ['f-sort-jual','f-mp-jual','f-status-jual','f-sort-stok','f-status-stok','f-kat-stok',
+   'f-mp-laba','f-kat-laba','f-sort-laba','f-aksi-history','f-entitas-history'].forEach(csInit);
   document.getElementById('f-tgl').value=today();
   (function(){const t=localStorage.getItem('omni_theme');if(t==='dark')document.documentElement.setAttribute('data-theme','dark')})();
   aktifkanAutoRefresh();
@@ -1251,6 +1258,7 @@ function populateKatDropdowns(){
     const el=document.getElementById(id);if(!el)return;
     const isFilter=id.startsWith('f-kat');
     el.innerHTML=(isFilter?'<option value="">Semua Kategori</option>':'')+names.map(n=>`<option>${n}</option>`).join('');
+    csSync(id); // sinkronkan label tombol dropdown custom (lihat blok CUSTOM SELECT)
   });
 }
 
@@ -2002,7 +2010,7 @@ function sortStokArray(arr){
   else arr.sort((a,b)=>waktu(b)-waktu(a)); // default: 'sku-terbaru'
   return arr;
 }
-function filterStokKritis(){document.getElementById('f-status-stok').value='';document.getElementById('q-stok').value='';document.getElementById('f-kat-stok').value='';const batas=(DB.pengaturan.batasStok!=null?DB.pengaturan.batasStok:10);filteredStok=DB.stok.filter(s=>s.stok<=batas);sortStokArray(filteredStok);pageStok=1;renderStokTable()}
+function filterStokKritis(){document.getElementById('f-status-stok').value='';document.getElementById('q-stok').value='';document.getElementById('f-kat-stok').value='';csSync('f-status-stok');csSync('f-kat-stok');const batas=(DB.pengaturan.batasStok!=null?DB.pengaturan.batasStok:10);filteredStok=DB.stok.filter(s=>s.stok<=batas);sortStokArray(filteredStok);pageStok=1;renderStokTable()}
 function renderStokTable(){
   const batas=(DB.pengaturan.batasStok!=null?DB.pengaturan.batasStok:10);const start=(pageStok-1)*PER_PAGE;const slice=filteredStok.slice(start,start+PER_PAGE);
   document.getElementById('tbl-stok').innerHTML=slice.length?slice.map(r=>{
@@ -2425,6 +2433,7 @@ function populateMpDropdowns(){
     const current=el.value;
     el.innerHTML=(isFilter?'<option value="">Semua Marketplace</option>':'')+MP_LIST.map(n=>`<option>${n}</option>`).join('');
     if(current&&MP_LIST.includes(current))el.value=current;
+    csSync(id); // sinkronkan label tombol dropdown custom (lihat blok CUSTOM SELECT)
   });
 }
 
@@ -3003,6 +3012,91 @@ function ppLabel(state){
   }
   return '';
 }
+// ===== CUSTOM SELECT (pengganti tampilan <select> native, KHUSUS dropdown
+// sort/filter di seluruh menu) =====
+// <select> native TIDAK BISA dibuat rounded 100% seperti .periode-panel —
+// kotak yang tertutup memang bisa di-styling CSS, tapi daftar pilihan yang
+// muncul saat dibuka dirender LANGSUNG oleh OS/browser (di luar kendali
+// CSS/HTML kita), makanya selalu ada sudut siku/garis tegas di situ.
+// Solusi: <select> aslinya TETAP ada di DOM (disembunyikan, bukan
+// dihapus) sebagai "sumber kebenaran" nilai & pemicu event `change` —
+// supaya SELURUH fungsi filter yang sudah ada (filterJual, filterStok,
+// filterLabaTable, filterHistory, dst — yang membaca `.value` seperti
+// biasa) tidak perlu diubah SAMA SEKALI. Yang user lihat & klik adalah
+// tombol + panel custom di sebelahnya, dibangun dari <div> biasa supaya
+// bisa 100% rounded & konsisten dengan .periode-panel.
+let csOpenId=null;
+function csInit(selectId){
+  const sel=document.getElementById(selectId);
+  if(!sel||sel.dataset.csInit)return; // elemen tak ada, atau sudah pernah di-init
+  sel.dataset.csInit='1';
+  // Sembunyikan select asli (bukan display:none, biar tetap bisa
+  // menerima .focus()/tab kalau suatu saat dibutuhkan) & keluarkan dari
+  // alur layout supaya tidak menggeser tombol custom di sampingnya.
+  sel.style.cssText='position:absolute;opacity:0;width:1px;height:1px;overflow:hidden;pointer-events:none';
+
+  const wrap=document.createElement('div');
+  wrap.className='cs-wrap';
+  sel.parentNode.insertBefore(wrap,sel);
+  wrap.appendChild(sel);
+
+  const btn=document.createElement('button');
+  btn.type='button';btn.className='cs-btn';
+  if(sel.style.minWidth)btn.style.minWidth=sel.style.minWidth;
+  btn.innerHTML='<span class="cs-btn-label"></span><span class="cs-chev">▾</span>';
+  wrap.appendChild(btn);
+
+  const panel=document.createElement('div');
+  panel.className='cs-panel';
+  wrap.appendChild(panel);
+
+  function syncLabel(){
+    const opt=sel.options[sel.selectedIndex];
+    btn.querySelector('.cs-btn-label').textContent=opt?opt.textContent:'';
+  }
+  function buildPanel(){
+    // Selalu dibangun ULANG dari opsi <select> yang LIVE saat panel
+    // dibuka — supaya otomatis ikut opsi terbaru walau daftarnya diubah
+    // secara terprogram (mis. populateMpDropdowns/populateKatDropdowns
+    // setelah user menambah marketplace/kategori baru).
+    panel.innerHTML='';
+    Array.from(sel.options).forEach((opt,i)=>{
+      const item=document.createElement('div');
+      item.className='cs-item'+(i===sel.selectedIndex?' cs-item-active':'');
+      item.textContent=opt.textContent;
+      item.onclick=(e)=>{
+        e.stopPropagation();
+        sel.selectedIndex=i;
+        sel.dispatchEvent(new Event('change',{bubbles:true})); // memicu onchange="filterXxx()" yang sudah ada, tanpa perlu diubah
+        syncLabel();
+        csCloseAll();
+      };
+      panel.appendChild(item);
+    });
+  }
+  btn.onclick=(e)=>{
+    e.stopPropagation();
+    const willOpen=csOpenId!==selectId;
+    csCloseAll();
+    if(willOpen){buildPanel();panel.classList.add('cs-open');btn.classList.add('cs-btn-open');csOpenId=selectId}
+  };
+  sel._csSync=syncLabel; // dipanggil dari luar (csSync) kalau .value diubah lewat kode, bukan klik user
+  syncLabel();
+}
+function csCloseAll(){
+  document.querySelectorAll('.cs-panel.cs-open').forEach(p=>p.classList.remove('cs-open'));
+  document.querySelectorAll('.cs-btn-open').forEach(b=>b.classList.remove('cs-btn-open'));
+  csOpenId=null;
+}
+document.addEventListener('click',csCloseAll);
+// Panggil ini setelah kode LAIN mengubah `.value` select terkait secara
+// terprogram (mis. filterStokKritis() mengosongkan filter status/kategori)
+// — supaya label tombol custom ikut ter-update, tidak nyangkut nilai lama.
+function csSync(selectId){
+  const sel=document.getElementById(selectId);
+  if(sel&&sel._csSync)sel._csSync();
+}
+
 // Terjemahkan state picker menjadi rentang tanggal [start,end] + label siap-tampil.
 function ppGetRange(containerId){
   const state=ppState[containerId]||{mode:'7_hari',tgl:new Date(),bulan:new Date().getMonth(),tahun:new Date().getFullYear()};
