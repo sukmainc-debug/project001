@@ -1924,7 +1924,7 @@ function rekonsiliasiStok(){
       si.updatedAt=new Date().toISOString();
     }
   });
-  saveDB(['stok']);filteredStok=[...DB.stok];renderStokTable();renderDashboard();
+  saveDB(['stok']);filterStok();renderDashboard();
   if(jumlahDiperbaiki)catatAktivitas('Rekonsiliasi','Stok Produk',`${jumlahDiperbaiki} SKU disesuaikan`);
   const daftarTakCocok=Object.entries(takCocok).sort((a,b)=>b[1].qty-a[1].qty);
   const res=document.getElementById('rekonsiliasi-result');
@@ -1989,7 +1989,7 @@ function simpanPesanan(){
     terapkanEfekStok(r,-1);
   }
   tandaiPesananDirty(r.no); // hanya pesanan INI yang akan dikirim ke server, bukan seluruh DB.penjualan
-  saveDB(['penjualan','stok']);filteredStok=[...DB.stok];filterJual();renderStokTable();renderDashboard();closeModal('modal-tambah-jual');
+  saveDB(['penjualan','stok']);filterJual();filterStok();renderDashboard();closeModal('modal-tambah-jual');
 }
 
 // ===== STOK TABLE =====
@@ -2082,7 +2082,15 @@ function simpanStok(){
   if(isEdit){DB.stok[parseInt(idx)]=Object.assign({},DB.stok[parseInt(idx)],r)}
   else{r.created_at=new Date().toISOString();DB.stok.unshift(r)}
   catatAktivitas(isEdit?'Edit':'Tambah','Stok Produk',`${r.prod}${r.varian?' - '+r.varian:''} (SKU ${r.sku})`);
-  saveDB(['stok']);filteredStok=[...DB.stok];renderStokTable();renderDashboard();closeModal('modal-tambah-stok');
+  // PENYEBAB BUG "pencarian tidak berfungsi setelah edit stok": sebelumnya
+  // baris ini me-reset `filteredStok` ke SELURUH DB.stok (mengabaikan isi
+  // kotak pencarian/filter yang sedang aktif) lalu langsung renderStokTable()
+  // — bukan lewat filterStok(). Akibatnya tabel kembali menampilkan SEMUA
+  // produk begitu selesai edit, padahal kotak pencarian masih terisi teks
+  // pencarian sebelumnya (kelihatan seperti "pencarian berhenti berfungsi").
+  // Fix: panggil filterStok() supaya filter (kata kunci, status, kategori)
+  // yang sedang aktif ikut diterapkan ulang ke data terbaru.
+  saveDB(['stok']);filterStok();renderDashboard();closeModal('modal-tambah-stok');
 }
 function bukaRestock(idx){
   _restockIdx=idx;const r=DB.stok[idx];
@@ -2097,7 +2105,7 @@ function simpanRestock(){
   const s=DB.stok[_restockIdx];
   s.stok+=tambah;s.updatedAt=new Date().toISOString();
   catatAktivitas('Restock','Stok Produk',`${s.prod}${s.varian?' - '+s.varian:''} +${tambah} pcs (SKU ${s.sku})`);
-  saveDB(['stok']);filteredStok=[...DB.stok];renderStokTable();renderDashboard();closeModal('modal-restock');_restockIdx=-1;
+  saveDB(['stok']);filterStok();renderDashboard();closeModal('modal-restock');_restockIdx=-1;
 }
 
 // ===== HAPUS =====
@@ -2119,9 +2127,9 @@ function hapusData(type,idx){
     terapkanEfekStok(order,+1); // kembalikan stok yang sebelumnya terpakai pesanan ini
     catatAktivitas('Hapus','Pesanan',`No. ${order.no} — ${order.mp} — ${fmtRp(order.total)}`);
     tandaiPesananDihapus(order.no); // hanya pesanan INI yang akan dihapus di server
-    DB.penjualan.splice(idx,1);filteredStok=[...DB.stok];filterJual();renderStokTable();affected=['penjualan','stok'];
+    DB.penjualan.splice(idx,1);filterJual();filterStok();affected=['penjualan','stok'];
   }
-  else if(type==='stok'){const s=DB.stok[idx];catatAktivitas('Hapus','Stok Produk',`${s.prod}${s.varian?' - '+s.varian:''} (SKU ${s.sku})`);DB.stok.splice(idx,1);filteredStok=[...DB.stok];renderStokTable();affected=['stok']}
+  else if(type==='stok'){const s=DB.stok[idx];catatAktivitas('Hapus','Stok Produk',`${s.prod}${s.varian?' - '+s.varian:''} (SKU ${s.sku})`);DB.stok.splice(idx,1);filterStok();affected=['stok']}
   else if(type==='kat'){const k=DB.kategori[idx];catatAktivitas('Hapus','Kategori',k.nama);DB.kategori.splice(idx,1);renderKatList();populateKatDropdowns();affected=['kategori']}
   else if(type==='mp'){
     if(DB.marketplace.length<=1){alert('Minimal harus ada 1 marketplace.');return}
@@ -3456,7 +3464,7 @@ function processCSV(file,type){
         }catch(err){errors++}
       }
     }
-    saveDB(['penjualan','stok','marketplace']);filteredStok=[...DB.stok];populateMpDropdowns();filterJual();renderStokTable();renderDashboard();
+    saveDB(['penjualan','stok','marketplace']);populateMpDropdowns();filterJual();filterStok();renderDashboard();
     catatAktivitas('Import',type==='jual'?'Pesanan':'Stok Produk',`Import CSV: ${imported} baris berhasil${errors?`, ${errors} gagal`:''}`);
     const res=document.getElementById(type==='jual'?'import-result':'import-stok-result');
     res.innerHTML=`<div class="alert alert-success">✅ Berhasil import <strong>${imported} baris</strong>${errors?` (${errors} baris gagal)`:''}</div>`;
@@ -3566,10 +3574,10 @@ function migrasiPenjualanLama(list){
     return{...r,items:r.items||[]};
   });
 }
-function restoreData(e){const reader=new FileReader();reader.onload=function(ev){try{DB=JSON.parse(ev.target.result);if(!DB.marketplace||!DB.marketplace.length)DB.marketplace=JSON.parse(JSON.stringify(DEFAULT_MP));DB.penjualan=migrasiPenjualanLama(DB.penjualan);if(!DB.pembelian)DB.pembelian=[];if(!DB.penggajian)DB.penggajian=[];refreshMpGlobals();_fullResyncPenjualan=true;saveDB();filteredStok=[...DB.stok];filteredPembelian=[...DB.pembelian];filteredPenggajian=[...DB.penggajian];applyPengaturan();populateKatDropdowns();populateMpDropdowns();ppSetMode('pp-dash','semua');renderDashboard();filterJual();renderStokTable();catatAktivitas('Restore','Data',`Pulihkan backup: ${DB.penjualan.length} pesanan, ${DB.stok.length} varian`);alert('Data dipulihkan! '+DB.penjualan.length+' pesanan, '+DB.stok.length+' varian.')}catch(err){alert('File backup tidak valid: '+err.message)}};reader.readAsText(e.target.files[0])}
+function restoreData(e){const reader=new FileReader();reader.onload=function(ev){try{DB=JSON.parse(ev.target.result);if(!DB.marketplace||!DB.marketplace.length)DB.marketplace=JSON.parse(JSON.stringify(DEFAULT_MP));DB.penjualan=migrasiPenjualanLama(DB.penjualan);if(!DB.pembelian)DB.pembelian=[];if(!DB.penggajian)DB.penggajian=[];refreshMpGlobals();_fullResyncPenjualan=true;saveDB();filteredPembelian=[...DB.pembelian];filteredPenggajian=[...DB.penggajian];applyPengaturan();populateKatDropdowns();populateMpDropdowns();ppSetMode('pp-dash','semua');renderDashboard();filterJual();filterStok();catatAktivitas('Restore','Data',`Pulihkan backup: ${DB.penjualan.length} pesanan, ${DB.stok.length} varian`);alert('Data dipulihkan! '+DB.penjualan.length+' pesanan, '+DB.stok.length+' varian.')}catch(err){alert('File backup tidak valid: '+err.message)}};reader.readAsText(e.target.files[0])}
 function resetData(){if(!canManageSettings()){alert('Hanya Owner yang bisa reset data.');return}if(confirm('Hapus SEMUA data penjualan & stok? Tindakan ini tidak bisa dibatalkan.')){
   DB.penjualan=[];DB.stok=[];DB.kategori=[...DEFAULT_KAT];DB.marketplace=JSON.parse(JSON.stringify(DEFAULT_MP));DB.biaya=JSON.parse(JSON.stringify(DEFAULT_BIAYA));DB.pembelian=[];DB.penggajian=[];
-  refreshMpGlobals();_fullResyncPenjualan=true;saveDB();filteredStok=[...DB.stok];filteredPembelian=[];filteredPenggajian=[];populateKatDropdowns();populateMpDropdowns();applyPengaturan();ppSetMode('pp-dash','semua');renderDashboard();filterJual();renderStokTable();
+  refreshMpGlobals();_fullResyncPenjualan=true;saveDB();filteredPembelian=[];filteredPenggajian=[];populateKatDropdowns();populateMpDropdowns();applyPengaturan();ppSetMode('pp-dash','semua');renderDashboard();filterJual();filterStok();
   catatAktivitas('Reset','Data','Semua data penjualan & stok dikosongkan');
   alert('Semua data berhasil dikosongkan. Silakan mulai input data Anda sendiri.');
 }}
