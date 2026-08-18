@@ -602,7 +602,12 @@ a:focus-visible,button:focus-visible,.btn:focus-visible,.nav-item:focus-visible,
 .periode-btn .pp-cal-icon{margin-left:2px;flex-shrink:0;opacity:.55}
 .periode-panel{
   position:absolute;top:calc(100% + 8px);right:0;z-index:400;display:flex;
-  background:var(--surface);backdrop-filter:var(--glass-blur);-webkit-backdrop-filter:var(--glass-blur);border:1px solid var(--border);border-radius:18px;box-shadow:var(--shadow);
+  /* PENTING: pakai --surface-solid (opaque), BUKAN --surface (kaca
+     translucent) — .periode-panel adalah panel dropdown yang harus
+     tetap terbaca jelas walau ada konten dashboard (chart, kartu, dsb)
+     di belakangnya. Memakai --surface yang tembus pandang + blur di sini
+     menyebabkan teks bercampur dengan konten di baliknya (tidak terbaca). */
+  background:var(--surface-solid);border:1px solid var(--border);border-radius:18px;box-shadow:var(--shadow);
   overflow:hidden;min-width:640px
 }
 .pp-list{width:190px;flex-shrink:0;border-right:1px solid var(--border);padding:10px 0}
