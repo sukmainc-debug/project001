@@ -179,7 +179,16 @@ body{font-family:'Plus Jakarta Sans',-apple-system,BlinkMacSystemFont,'Segoe UI'
    yang tertutup ini bisa duduk di atas tabel/chart berwarna-warni, jadi
    kalau transparan, teks pilihannya (mis. "Urutkan: Terbaru") ikut
    bercampur & susah dibaca. */
-.form-select{padding:8px 12px;border-radius:12px;border:1px solid var(--border2);background:var(--surface-solid);color:var(--text);font-size:13px;cursor:pointer;font-family:inherit}
+.form-select{padding:8px 12px;border-radius:12px;border:1px solid var(--border2);background:var(--surface-solid);color:var(--text);font-size:13px;cursor:pointer;font-family:inherit;outline:none;transition:border-color .15s,box-shadow .15s}
+/* PENYEBAB "garis tegas" di screenshot: .form-select TIDAK punya
+   outline:none seperti .form-input, jadi saat dropdown dibuka/di-klik,
+   browser menimpanya dengan outline BAWAAN berbentuk KOTAK SIKU (tidak
+   ikut border-radius:12px) dari rule .form-select:focus-visible di bawah
+   — makanya sudutnya nongol tajam keluar dari bentuk pill/rounded,
+   beda dengan tombol "Periode Data" yang tidak kena masalah ini.
+   Fix: ganti dengan box-shadow rounded (otomatis ikut border-radius),
+   persis seperti gaya fokus .form-input di atas. */
+.form-select:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-light)}
 .form-input{padding:9px 13px;border-radius:12px;border:1px solid var(--border2);background:var(--surface);backdrop-filter:var(--glass-blur);-webkit-backdrop-filter:var(--glass-blur);color:var(--text);font-size:13px;font-family:inherit;outline:none;width:100%;transition:border-color .15s,box-shadow .15s}
 .form-input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-light)}
 .form-group{margin-bottom:13px}
@@ -491,7 +500,7 @@ body.sidebar-collapsed .sidebar{width:0;padding-left:0;padding-right:0;border-ri
 .form-input[readonly]{background:var(--surface2);color:var(--text2);cursor:not-allowed}
 /* Outline fokus keyboard yang konsisten (navigasi tanpa mouse). */
 a:focus-visible,button:focus-visible,.btn:focus-visible,.nav-item:focus-visible,
-.form-input:focus-visible,.form-select:focus-visible,.tab-pill:focus-visible{
+.form-input:focus-visible,.tab-pill:focus-visible{
   outline:2px solid var(--accent);outline-offset:2px;
 }
 
