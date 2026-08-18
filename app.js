@@ -620,7 +620,8 @@ async function initApp(){
   // saat pertama kali dibangun (walau sebenarnya panel selalu dibangun
   // ulang live setiap dibuka, jadi urutan ini bukan syarat mutlak).
   ['f-sort-jual','f-mp-jual','f-status-jual','f-sort-stok','f-status-stok','f-kat-stok',
-   'f-mp-laba','f-kat-laba','f-sort-laba','f-aksi-history','f-entitas-history'].forEach(csInit);
+   'f-mp-laba','f-kat-laba','f-sort-laba','f-aksi-history','f-entitas-history',
+   'f-mp','f-status','s-kat'].forEach(csInit);
   document.getElementById('f-tgl').value=today();
   (function(){const t=localStorage.getItem('omni_theme');if(t==='dark')document.documentElement.setAttribute('data-theme','dark')})();
   aktifkanAutoRefresh();
@@ -1627,6 +1628,7 @@ function bukaEditJual(idx){
   document.getElementById('f-tgl').value=r._date?r._date.split('T')[0]:today();
   document.getElementById('f-mp').value=r.mp;
   document.getElementById('f-status').value=r.status;
+  csSync('f-mp');csSync('f-status'); // sinkronkan label tombol dropdown custom saat buka modal Edit
   document.getElementById('f-biaya-admin').value=r.biayaAdmin!=null?r.biayaAdmin:Math.round(getSaranBiayaAdmin(r.mp,r.total));
   document.getElementById('f-biaya-tambahan').value=r.biayaTambahan!=null?r.biayaTambahan:Math.round(getSaranBiayaTambahan());
   populateKatDropdowns();
@@ -2053,6 +2055,7 @@ function bukaEditStok(idx){
   document.getElementById('s-hpp').value=r.hpp!=null?r.hpp:0;
   populateKatDropdowns();
   document.getElementById('s-kat').value=r.kat||'';
+  csSync('s-kat'); // sinkronkan label tombol dropdown custom (di-set setelah populate, jadi perlu sync ulang)
   openModal('modal-tambah-stok');
 }
 function bukaModalTambahStok(){
@@ -3037,6 +3040,12 @@ function csInit(selectId){
 
   const wrap=document.createElement('div');
   wrap.className='cs-wrap';
+  // Kalau select aslinya class "form-input" (dipakai di dalam modal form,
+  // mis. Marketplace/Status/Kategori pada modal Tambah Pesanan & Tambah
+  // Stok) — field itu didesain lebar PENUH mengisi kolom form, beda dari
+  // dropdown filter di toolbar yang lebar mengikuti isi teks. Tambahkan
+  // modifier supaya tombol custom-nya ikut melebar penuh juga.
+  if(sel.classList.contains('form-input'))wrap.classList.add('cs-block');
   sel.parentNode.insertBefore(wrap,sel);
   wrap.appendChild(sel);
 
