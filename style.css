@@ -375,6 +375,13 @@ tr:hover td{background:var(--surface2)}
 
 /* ===== Progress bars ===== */
 .prog-row{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+/* Daftar "Stok Habis" & "Stok Rendah" di Dashboard Kasir — kalau varian
+   yang habis/menipis banyak (toko dengan ratusan SKU), daftar ini bisa
+   sangat panjang ke bawah dan bikin kartunya "membengkak" jauh lebih
+   tinggi dari kartu lain di sebelahnya. Dibatasi tinggi maksimum + scroll
+   internal (bukan menyembunyikan/memotong data) supaya kartu tetap ringkas
+   dan sejajar rapi dengan kartu "Pesanan Terbaru" di bawahnya. */
+.kasirdash-scroll-list{max-height:280px;overflow-y:auto;padding-right:4px;margin-right:-4px}
 .prog-label{width:130px;flex-shrink:0;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .prog-track{flex:1;height:7px;background:var(--surface2);border-radius:6px;overflow:hidden}
 .prog-fill{height:100%;border-radius:6px;background:var(--accent)}
