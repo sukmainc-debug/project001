@@ -818,10 +818,11 @@ a:focus-visible,button:focus-visible,.btn:focus-visible,.nav-item:focus-visible,
   }
   html,body{background:#fff!important;height:auto!important;min-height:0!important}
   body{font-family:'Segoe UI',Arial,Helvetica,sans-serif;-webkit-print-color-adjust:exact;print-color-adjust:exact;color:#1a1a1a!important;font-variant-numeric:tabular-nums}
-  /* Palet resmi "laporan keuangan perusahaan" — navy gelap sebagai warna
-     korporat utama (dipakai di kop, judul dokumen, header tabel), dengan
-     satu warna aksen keemasan tipis sebagai garis pemisah dekoratif. */
-  :root{--print-navy:#131c34;--print-navy2:#1e2c4f;--print-gold:#b8933c;--print-line:#c9ccd6}
+  /* Palet resmi "laporan keuangan perusahaan" — hijau tua gelap sebagai
+     warna korporat utama (dipakai di kop, judul dokumen, header tabel),
+     senada warna aksen hijau khas aplikasi (--accent di tema layar),
+     dengan satu warna aksen hijau terang sebagai garis pemisah dekoratif. */
+  :root{--print-green:#0b3d2e;--print-green2:#0f7a52;--print-accent:#16a34a;--print-line:#c9ccd6}
   /* PENTING — Shell aplikasi (#app-wrap/.main/.page-content) didesain SELALU
      gelap (lihat --shell-bg2 di :root, tidak berubah walau tema terang/gelap
      dipilih) dan #app-wrap dipatok height:100vh. Kalau tidak dinetralkan di
@@ -857,14 +858,41 @@ a:focus-visible,button:focus-visible,.btn:focus-visible,.nav-item:focus-visible,
   .section.active{display:block!important}
   .card{box-shadow:none!important;border:1px solid #ddd!important;break-inside:avoid;page-break-inside:avoid;margin-bottom:12px!important;background:#fff!important}
 
-  /* ===== Ringkasan Keuangan + Tren Omzet SENGAJA dibungkus 1 wrapper agar
-     browser mencetak keduanya di HALAMAN YANG SAMA (tidak terpisah oleh
-     jeda halaman otomatis) — sesuai permintaan "1 halaman dengan Ringkasan
-     Keuangan". Tinggi chart Tren Omzet juga dipangkas sedikit khusus cetak
-     (dari 280px di layar) supaya kombinasi kartu + grafik lebih pasti muat
-     dalam tinggi 1 halaman A4 bersama kop laporan di atasnya. ===== */
-  .fin-print-keep-together{break-inside:avoid;page-break-inside:avoid}
-  .fin-print-keep-together .chart-box{height:170px!important}
+  /* ===== Ringkasan Keuangan, Tren Omzet, Revenue per Marketplace,
+     Komposisi Biaya, Total Nilai Aset Stok Gudang & Nilai Aset per
+     Kategori — SEMUA dipaksa tampil dalam SATU HALAMAN PENUH saat
+     dicetak, menyusun ulang tata letaknya meniru dashboard di layar
+     (kartu ringkasan 3 kolom di atas, Tren Omzet full-width, lalu 2
+     baris grafik berdampingan 2 kolom). Untuk muat 1 halaman, SEMUA
+     ukuran di dalam blok ini dipadatkan signifikan (padding/margin/font
+     lebih kecil dari bagian laporan lain), dan tabel rincian angka di
+     bawah 2 chart (Revenue per Marketplace & Nilai Aset per Kategori)
+     disembunyikan — cukup grafik+legenda seperti di dashboard, rincian
+     angka lengkapnya tetap ada di tabel Laba Rugi & Lampiran Pesanan. ===== */
+  .fin-print-onepage{break-inside:avoid;page-break-inside:avoid;margin-bottom:20px}
+  /* Di luar blok ini, grid-2 SENGAJA dipaksa 1 kolom penuh (lihat rule
+     global .grid-2 di bawah) supaya chart bagian lain tetap besar &
+     mudah dibaca satu-satu. Di SINI kita kembalikan ke 2 kolom karena
+     justru butuh memadatkan 4 chart jadi 2 baris×2 kolom supaya semuanya
+     muat dalam satu halaman bersama kartu ringkasan & Tren Omzet. */
+  .fin-print-onepage .grid-2{grid-template-columns:1fr 1fr!important;gap:8px!important;margin-bottom:6px!important}
+  .fin-print-onepage .card{padding:8px 10px!important;margin-bottom:6px!important;border-radius:8px!important}
+  .fin-print-onepage .card-title{font-size:9px!important;margin-bottom:4px!important}
+  .fin-print-onepage .chart-box{height:96px!important}
+  .fin-print-onepage canvas{max-height:96px!important}
+  .fin-print-onepage .fin-metric-grid{gap:5px!important}
+  .fin-print-onepage .fin-metric{padding:6px 8px!important;border-radius:4px!important;border-top-width:2px!important}
+  .fin-print-onepage .fin-metric-label{font-size:7px!important}
+  .fin-print-onepage .fin-metric-value{font-size:12px!important;margin-top:1px!important}
+  .fin-print-onepage .fin-metric-sub{font-size:7px!important;margin-top:1px!important}
+  .fin-print-onepage .fin-print-table-wrap{display:none!important}
+  .fin-print-onepage #keuangan-pie-legend{font-size:7px!important;gap:5px!important;margin-top:3px!important}
+  .fin-print-onepage .fin-aset-hero{padding:0!important}
+  .fin-print-onepage #aset-total-display{font-size:17px!important}
+  .fin-print-onepage .fin-aset-hero>div:last-child{font-size:7px!important;margin-top:1px!important}
+  .fin-print-onepage .fin-aset-stats{margin-top:6px!important;padding-top:6px!important}
+  .fin-print-onepage .fin-aset-stats div div:first-child{font-size:7px!important}
+  .fin-print-onepage #aset-varian,.fin-print-onepage #aset-qty,.fin-print-onepage #aset-kritis{font-size:12px!important;margin-top:1px!important}
 
   /* ===== KARTU RINGKASAN (metric cards) — gaya "kotak putih bersih" ala
      dokumen referensi: border tipis, label kecil huruf kapital abu-abu,
@@ -873,16 +901,16 @@ a:focus-visible,button:focus-visible,.btn:focus-visible,.nav-item:focus-visible,
      ▲/▼ otomatis lewat CSS. ===== */
   .fin-metric{
     break-inside:avoid;box-shadow:none!important;background:#fff!important;
-    border:1px solid var(--print-line)!important;border-top:3px solid var(--print-navy)!important;
+    border:1px solid var(--print-line)!important;border-top:3px solid var(--print-green)!important;
     border-radius:5px;padding:12px 14px!important;
   }
   .fin-metric.fm-success{border-top-color:#0a8a5c!important}
   .fin-metric.fm-danger{border-top-color:#c0221f!important}
   .fin-metric.fm-warning{border-top-color:#b45f06!important}
-  .fin-metric.fm-accent{border-top-color:var(--print-navy)!important}
+  .fin-metric.fm-accent{border-top-color:var(--print-green)!important}
   .fin-metric-icon{display:none!important}
   .fin-metric-label{font-size:9.5px!important;text-transform:uppercase;letter-spacing:.06em;color:#777!important;font-weight:800!important}
-  .fin-metric-value{color:var(--print-navy)!important;font-size:18px!important;font-weight:800!important;margin-top:3px!important}
+  .fin-metric-value{color:var(--print-green)!important;font-size:18px!important;font-weight:800!important;margin-top:3px!important}
   .fin-metric-sub{font-size:9.5px!important;color:#777!important;margin-top:4px!important;font-weight:600}
   .fin-metric.fm-success .fin-metric-sub{color:#0a8a5c!important}
   .fin-metric.fm-danger .fin-metric-sub{color:#c0221f!important}
@@ -906,15 +934,15 @@ a:focus-visible,button:focus-visible,.btn:focus-visible,.nav-item:focus-visible,
      grid metadata 2 kolom (kanan), meniru banner header dokumen referensi. ===== */
   .fin-print-header{
     display:flex!important;align-items:center;justify-content:space-between;gap:20px;
-    background:linear-gradient(135deg,var(--print-navy),var(--print-navy2))!important;
-    color:#fff!important;padding:20px 24px;border-radius:8px;margin-bottom:16px;
+    background:linear-gradient(135deg,var(--print-green),var(--print-green2))!important;
+    color:#fff!important;padding:14px 22px;border-radius:8px;margin-bottom:10px;
     position:relative;overflow:hidden;
     -webkit-print-color-adjust:exact;print-color-adjust:exact;
   }
   /* Garis aksen emas tipis menempel di tepi bawah kotak navy — detail kecil
      yang umum dipakai di kop laporan keuangan korporat. */
   .fin-print-header::after{
-    content:'';position:absolute;left:0;right:0;bottom:0;height:3px;background:var(--print-gold);
+    content:'';position:absolute;left:0;right:0;bottom:0;height:3px;background:var(--print-accent);
   }
   .fin-print-brand{display:flex;align-items:center;gap:12px}
   .fin-print-brand img{width:44px;height:44px;border-radius:6px;object-fit:cover;border:1px solid rgba(255,255,255,.35)}
@@ -930,17 +958,17 @@ a:focus-visible,button:focus-visible,.btn:focus-visible,.nav-item:focus-visible,
   /* Sub-bar tipis di bawah kop — menegaskan periode laporan yang sedang
      dicetak, senada gaya dokumen resmi tanpa mengulang judul besar. */
   .fin-print-doctitle{
-    display:block!important;text-align:center;margin:0 0 18px;padding:8px 0;
+    display:block!important;text-align:center;margin:0 0 10px;padding:5px 0;
     border-bottom:1px solid var(--print-line);
   }
-  .fin-print-doctitle-sub{font-size:10.5px;color:var(--print-navy2);margin:0;font-weight:800;letter-spacing:.1em}
+  .fin-print-doctitle-sub{font-size:10.5px;color:var(--print-green2);margin:0;font-weight:800;letter-spacing:.1em}
 
   /* ===== Judul bagian bernomor ("1. Visualisasi & Analisis...", dst) —
      bar aksen navy di kiri + teks tebal, meniru heading bernomor pada
      dokumen referensi. ===== */
   .fin-section-title{
-    display:block!important;font-size:12.5px;font-weight:800;color:var(--print-navy);
-    border-left:3.5px solid var(--print-navy);padding:2px 0 2px 10px;margin:18px 0 10px;
+    display:block!important;font-size:12.5px;font-weight:800;color:var(--print-green);
+    border-left:3.5px solid var(--print-green);padding:2px 0 2px 10px;margin:10px 0 8px;
   }
 
   /* ===== LAPORAN LABA RUGI (tabel format akuntansi) ===== */
@@ -950,7 +978,7 @@ a:focus-visible,button:focus-visible,.btn:focus-visible,.nav-item:focus-visible,
     overflow:hidden;
   }
   .fin-stmt-title{
-    font-size:12px;font-weight:800;letter-spacing:.04em;color:#fff;background:var(--print-navy);
+    font-size:12px;font-weight:800;letter-spacing:.04em;color:#fff;background:var(--print-green);
     padding:9px 16px;-webkit-print-color-adjust:exact;print-color-adjust:exact;
   }
   .fin-stmt-period{font-size:10px;color:#666;font-weight:600;padding:8px 16px 0;text-align:right}
@@ -960,22 +988,22 @@ a:focus-visible,button:focus-visible,.btn:focus-visible,.nav-item:focus-visible,
   .fin-stmt-table .fin-stmt-val{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap;width:150px}
   .fin-stmt-table thead th{
     text-align:right;font-size:9px;text-transform:uppercase;letter-spacing:.05em;color:#fff;font-weight:700;
-    padding:8px 16px;background:var(--print-navy2)!important;-webkit-print-color-adjust:exact;print-color-adjust:exact;
+    padding:8px 16px;background:var(--print-green2)!important;-webkit-print-color-adjust:exact;print-color-adjust:exact;
   }
   .fin-stmt-table thead th:first-child{text-align:left}
   .fin-stmt-table tbody tr:nth-child(even){background:#f6f7fb!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
   .fin-stmt-table tr.fin-stmt-section td{
     padding:12px 16px 4px;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;
-    color:var(--print-navy2);border-bottom:1px solid #eee;background:#fff!important;
+    color:var(--print-green2);border-bottom:1px solid #eee;background:#fff!important;
   }
   .fin-stmt-table tr.fin-stmt-subtotal td{
-    border-top:1px solid #999;font-weight:700;padding-top:8px;background:#eef1f8!important;
+    border-top:1px solid #999;font-weight:700;padding-top:8px;background:#eef8f2!important;
     -webkit-print-color-adjust:exact;print-color-adjust:exact;
   }
   .fin-stmt-table tr.fin-stmt-total td{
-    border-top:2px solid var(--print-navy);border-bottom:2px double var(--print-navy);font-weight:800;font-size:13.5px;
-    padding-top:10px;padding-bottom:10px;color:var(--print-navy);background:var(--print-gold)!important;
-    background:#fbf3e2!important;-webkit-print-color-adjust:exact;print-color-adjust:exact;
+    border-top:2px solid var(--print-green);border-bottom:2px double var(--print-green);font-weight:800;font-size:13.5px;
+    padding-top:10px;padding-bottom:10px;color:var(--print-green);background:#e3f7ec!important;
+    -webkit-print-color-adjust:exact;print-color-adjust:exact;
   }
   .fin-stmt-table tr.fin-stmt-margin td{font-size:10.5px;color:#666;font-style:italic;padding-top:4px;padding-bottom:14px;background:#fff!important}
 
@@ -989,15 +1017,15 @@ a:focus-visible,button:focus-visible,.btn:focus-visible,.nav-item:focus-visible,
     position:relative;padding-left:16px;font-size:11px;line-height:1.65;color:#222;margin-bottom:8px;
   }
   .fin-notes-list li:last-child{margin-bottom:0}
-  .fin-notes-list li::before{content:'•';position:absolute;left:0;color:var(--print-gold);font-weight:900}
-  .fin-notes-list b{color:var(--print-navy)}
+  .fin-notes-list li::before{content:'•';position:absolute;left:0;color:var(--print-accent);font-weight:900}
+  .fin-notes-list b{color:var(--print-green)}
 
 
   /* ===== Tabel mini pendamping chart (Revenue per Marketplace / Nilai Aset per Kategori) ===== */
   .print-only{display:block!important}
   .fin-print-table-wrap{margin-top:10px;padding-top:10px;border-top:1px dashed var(--print-line)}
   .fin-mini-table{width:100%;border-collapse:collapse;font-size:10.5px}
-  .fin-mini-table th{text-align:left;font-size:9px;text-transform:uppercase;letter-spacing:.05em;color:var(--print-navy2);font-weight:800;padding:5px 3px;border-bottom:1.5px solid var(--print-navy2)}
+  .fin-mini-table th{text-align:left;font-size:9px;text-transform:uppercase;letter-spacing:.05em;color:var(--print-green2);font-weight:800;padding:5px 3px;border-bottom:1.5px solid var(--print-green2)}
   .fin-mini-table td{padding:4px 3px;border-bottom:1px solid #eee;color:#222}
   .fin-mini-table tr.fin-mini-total td{border-top:1.5px solid #999;border-bottom:none;font-weight:800;padding-top:6px}
 
@@ -1019,14 +1047,14 @@ a:focus-visible,button:focus-visible,.btn:focus-visible,.nav-item:focus-visible,
   .fin-orders-table thead{display:table-header-group} /* header tabel otomatis diulang tiap ganti halaman cetak */
   .fin-orders-table tr{break-inside:avoid;page-break-inside:avoid} /* 1 baris pesanan tidak terpotong di tengah */
   .fin-orders-table th{
-    text-align:left;font-size:8.5px;text-transform:uppercase;letter-spacing:.04em;color:var(--print-navy2);
-    font-weight:800;padding:6px 8px;border-bottom:1.5px solid var(--print-navy2);background:#f6f7fb!important;
+    text-align:left;font-size:8.5px;text-transform:uppercase;letter-spacing:.04em;color:var(--print-green2);
+    font-weight:800;padding:6px 8px;border-bottom:1.5px solid var(--print-green2);background:#f6f7fb!important;
     -webkit-print-color-adjust:exact;print-color-adjust:exact;
   }
   .fin-orders-table td{padding:5px 8px;border-bottom:1px solid #eee;color:#222;vertical-align:top}
   .fin-orders-table .fin-ord-mono{font-family:'Courier New',monospace;font-size:9.5px;white-space:nowrap}
   .fin-orders-table .fin-ord-prod{max-width:220px}
-  .fin-orders-table tfoot td{border-top:2px solid var(--print-navy);border-bottom:none;font-weight:800;padding-top:8px}
+  .fin-orders-table tfoot td{border-top:2px solid var(--print-green);border-bottom:none;font-weight:800;padding-top:8px}
   .fin-orders-table tbody tr:nth-child(even){background:#fafafa!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
 
 
@@ -1048,7 +1076,7 @@ a:focus-visible,button:focus-visible,.btn:focus-visible,.nav-item:focus-visible,
   .fin-print-sign-box{flex:1;text-align:center;font-size:10.5px;color:#444}
   .fin-print-sign-box>span{display:block;margin-bottom:44px}
   .fin-print-sign-line{border-top:1px solid #999;margin-bottom:6px;height:8px}
-  .fin-print-sign-name{font-size:10.5px;font-weight:700;color:var(--print-navy);margin-top:2px}
+  .fin-print-sign-name{font-size:10.5px;font-weight:700;color:var(--print-green);margin-top:2px}
   .fin-print-sign-role{font-size:9px;color:#888;margin-top:1px;font-style:italic}
 }
 
