@@ -110,7 +110,24 @@ body{font-family:'Plus Jakarta Sans',-apple-system,BlinkMacSystemFont,'Segoe UI'
 }
 .main{flex:1;min-width:0;display:flex;flex-direction:column;background:transparent;overflow-y:auto}
 .topbar{background:var(--surface2);backdrop-filter:var(--glass-blur);-webkit-backdrop-filter:var(--glass-blur);border-bottom:1px solid var(--border);border-radius:0;margin:0;padding:16px 26px;height:auto;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50;box-shadow:none;gap:12px;flex-wrap:wrap}
-.page-content{padding:22px 26px 34px;max-width:1400px}
+/* PENYEBAB tampilan "tidak responsif" saat zoom out / layar sangat lebar:
+   max-width membatasi lebar konten, TAPI tanpa margin:auto — jadi begitu
+   viewport lebih lebar dari 1400px (persis yang terjadi saat browser
+   di-zoom out, karena area pandang efektif jadi lebih lebar), seluruh
+   konten menempel rapat ke kiri (nempel sisi sidebar) dan menyisakan
+   ruang kosong besar sebelah kanan, terkesan patah/belum jadi. Fix:
+   - margin:0 auto supaya sisa ruang terbagi rata kiri-kanan (center),
+     bukan menumpuk di satu sisi.
+   - breakpoint tambahan di bawah menaikkan batas lebar secara bertahap
+     di layar sangat lebar, supaya tabel/kartu ikut memanfaatkan ruang
+     ekstra alih-alih cuma "mengambang" di tengah dengan cap yang sama. */
+.page-content{padding:22px 26px 34px;max-width:1400px;margin:0 auto}
+/* Di layar sangat lebar (umum terjadi kalau browser di-zoom out di monitor
+   besar), naikkan bertahap batas lebar konten supaya tabel & grid kartu
+   ikut memanfaatkan ruang ekstra alih-alih cuma jadi kolom sempit yang
+   mengambang di tengah lautan ruang kosong. */
+@media(min-width:1700px){.page-content{max-width:1600px}}
+@media(min-width:2000px){.page-content{max-width:1800px}}
 
 /* ===== Sidebar =====
    Sengaja dipisah dari .main lewat sepasang variabel --sidebar-* (didefinisikan
