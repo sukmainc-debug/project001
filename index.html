@@ -567,14 +567,16 @@
         <div class="periode-picker" id="pp-laporan"></div>
       </div>
 
-      <!-- DIBUNGKUS BERSAMA (khusus cetak) — Ringkasan Keuangan (kartu) +
-           Tren Omzet SENGAJA ditempatkan berurutan tanpa jeda di sini
-           (bukan di bawah bersama grafik lain) supaya keduanya selalu
-           tercetak di HALAMAN YANG SAMA (lihat .fin-print-keep-together
-           page-break-inside:avoid di style.css). Grafik lain (Revenue per
-           Marketplace, Komposisi Biaya, Aset Stok) tetap menyusul di
-           bawahnya seperti biasa. -->
-      <div class="fin-print-keep-together">
+      <!-- DIBUNGKUS BERSAMA (khusus cetak) — Ringkasan Keuangan, Tren
+           Omzet, Revenue per Marketplace, Komposisi Biaya, Total Nilai
+           Aset Stok Gudang & Nilai Aset per Kategori SEMUANYA dipaksa
+           tampil dalam SATU HALAMAN PENUH saat dicetak (lihat
+           .fin-print-onepage page-break-inside:avoid + ukuran yang
+           dipadatkan khusus untuk kombinasi ini di style.css), dengan
+           urutan/susunan grafik mengikuti tata letak dashboard: kartu
+           ringkasan di atas, Tren Omzet full-width, lalu 2 baris grafik
+           berdampingan. -->
+      <div class="fin-print-onepage">
         <div class="card mb18 fin-hero">
           <div class="card-title">
             <span id="keuangan-title">Ringkasan Keuangan</span>
@@ -586,33 +588,33 @@
           <div class="card-title"><span id="tren-omzet-title">Tren Omzet</span></div>
           <div class="chart-box" style="height:280px"><canvas id="chartTrenOmzet"></canvas></div>
         </div>
-      </div>
 
-      <div class="grid-2 mb18">
-        <div class="card"><div class="card-title">Revenue per Marketplace</div><div class="chart-box" style="height:210px"><canvas id="chartMpBar"></canvas></div>
-          <div class="fin-print-table-wrap print-only" id="fin-print-mp-table"></div>
-        </div>
-        <div class="card"><div class="card-title">Komposisi Biaya</div>
-          <div class="chart-box" style="height:170px"><canvas id="chartKeuanganPie"></canvas></div>
-          <div id="keuangan-pie-legend" style="display:flex;gap:14px;justify-content:center;margin-top:10px;font-size:12px;color:var(--text2);flex-wrap:wrap"></div>
-        </div>
-      </div>
-
-      <div class="grid-2 mb18">
-        <div class="card">
-          <div class="card-title">💰 Total Nilai Aset Stok Gudang</div>
-          <div style="text-align:center;padding:8px 0 4px">
-            <div style="font-size:30px;font-weight:800;color:var(--text)" id="aset-total-display">Rp 0</div>
-            <div style="font-size:12px;color:var(--text3);margin-top:4px">Estimasi nilai stok saat ini (HPP × Qty tersisa) — nilai real-time, bukan per periode</div>
+        <div class="grid-2 mb18">
+          <div class="card"><div class="card-title">Revenue per Marketplace</div><div class="chart-box" style="height:210px"><canvas id="chartMpBar"></canvas></div>
+            <div class="fin-print-table-wrap print-only" id="fin-print-mp-table"></div>
           </div>
-          <div style="display:flex;justify-content:space-around;margin-top:14px;padding-top:14px;border-top:1px solid var(--border)">
-            <div style="text-align:center"><div style="font-size:11px;color:var(--text3);font-weight:700;text-transform:uppercase;letter-spacing:.03em">Total Varian</div><div style="font-size:18px;font-weight:800;margin-top:4px" id="aset-varian">0</div></div>
-            <div style="text-align:center"><div style="font-size:11px;color:var(--text3);font-weight:700;text-transform:uppercase;letter-spacing:.03em">Total Qty Stok</div><div style="font-size:18px;font-weight:800;margin-top:4px" id="aset-qty">0</div></div>
-            <div style="text-align:center"><div style="font-size:11px;color:var(--danger);font-weight:700;text-transform:uppercase;letter-spacing:.03em">Stok Kritis</div><div style="font-size:18px;font-weight:800;margin-top:4px;color:var(--danger)" id="aset-kritis">0</div></div>
+          <div class="card"><div class="card-title">Komposisi Biaya</div>
+            <div class="chart-box" style="height:170px"><canvas id="chartKeuanganPie"></canvas></div>
+            <div id="keuangan-pie-legend" style="display:flex;gap:14px;justify-content:center;margin-top:10px;font-size:12px;color:var(--text2);flex-wrap:wrap"></div>
           </div>
         </div>
-        <div class="card"><div class="card-title">Nilai Aset per Kategori</div><div class="chart-box" style="height:210px"><canvas id="chartAsetKategori"></canvas></div>
-          <div class="fin-print-table-wrap print-only" id="fin-print-aset-table"></div>
+
+        <div class="grid-2 mb18">
+          <div class="card">
+            <div class="card-title">💰 Total Nilai Aset Stok Gudang</div>
+            <div class="fin-aset-hero" style="text-align:center;padding:8px 0 4px">
+              <div style="font-size:30px;font-weight:800;color:var(--text)" id="aset-total-display">Rp 0</div>
+              <div style="font-size:12px;color:var(--text3);margin-top:4px">Estimasi nilai stok saat ini (HPP × Qty tersisa) — nilai real-time, bukan per periode</div>
+            </div>
+            <div class="fin-aset-stats" style="display:flex;justify-content:space-around;margin-top:14px;padding-top:14px;border-top:1px solid var(--border)">
+              <div style="text-align:center"><div style="font-size:11px;color:var(--text3);font-weight:700;text-transform:uppercase;letter-spacing:.03em">Total Varian</div><div style="font-size:18px;font-weight:800;margin-top:4px" id="aset-varian">0</div></div>
+              <div style="text-align:center"><div style="font-size:11px;color:var(--text3);font-weight:700;text-transform:uppercase;letter-spacing:.03em">Total Qty Stok</div><div style="font-size:18px;font-weight:800;margin-top:4px" id="aset-qty">0</div></div>
+              <div style="text-align:center"><div style="font-size:11px;color:var(--danger);font-weight:700;text-transform:uppercase;letter-spacing:.03em">Stok Kritis</div><div style="font-size:18px;font-weight:800;margin-top:4px;color:var(--danger)" id="aset-kritis">0</div></div>
+            </div>
+          </div>
+          <div class="card"><div class="card-title">Nilai Aset per Kategori</div><div class="chart-box" style="height:210px"><canvas id="chartAsetKategori"></canvas></div>
+            <div class="fin-print-table-wrap print-only" id="fin-print-aset-table"></div>
+          </div>
         </div>
       </div>
 
