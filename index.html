@@ -234,11 +234,11 @@
       <div class="grid-2 mb18" style="margin-top:18px">
         <div class="card">
           <div class="card-title">⚠️ Stok Habis <span class="badge badge-red" id="kasirdash-habis-count" style="margin-left:6px">0</span></div>
-          <div id="kasirdash-habis-list"></div>
+          <div id="kasirdash-habis-list" class="kasirdash-scroll-list"></div>
         </div>
         <div class="card">
           <div class="card-title">⚡ Stok Rendah <span class="badge badge-yellow" id="kasirdash-rendah-count" style="margin-left:6px">0</span></div>
-          <div id="kasirdash-rendah-list"></div>
+          <div id="kasirdash-rendah-list" class="kasirdash-scroll-list"></div>
         </div>
       </div>
 
@@ -381,11 +381,31 @@
 
     <!-- PRODUK & KATEGORI -->
     <div class="section" id="sec-produk">
+      <!-- PENYEBAB "ukurannya lebih kecil dari halaman lain": 4 kartu di
+           bawah ini sebelumnya memakai komponen lama .metric-card (padding
+           16px, ikon 34px, angka 19px) — komponen yang dipakai SEBELUM
+           kartu ringkasan di-upgrade jadi .fin-metric (padding 20px, ikon
+           40px, angka 25px) yang sudah dipakai di Dashboard & Laporan
+           Keuangan. Halaman ini kelewat saat upgrade itu dilakukan, jadi
+           terlihat lebih kecil sendiri. Disamakan ke .fin-metric di sini
+           supaya ukurannya konsisten dengan halaman lain. -->
       <div class="grid-4 mb18">
-        <div class="metric-card m-accent"><div class="metric-icon">🏷️</div><div class="metric-label">Total Produk</div><div class="metric-value" id="p-total-produk">0</div></div>
-        <div class="metric-card m-accent"><div class="metric-icon">🎨</div><div class="metric-label">Total Varian</div><div class="metric-value" id="p-total-varian">0</div></div>
-        <div class="metric-card m-accent"><div class="metric-icon">📁</div><div class="metric-label">Total Kategori</div><div class="metric-value" id="p-total-kat">0</div></div>
-        <div class="metric-card m-danger"><div class="metric-icon">⚠️</div><div class="metric-label">Produk Kritis</div><div class="metric-value red" id="p-kritis">0</div></div>
+        <div class="fin-metric fm-accent">
+          <div class="fin-metric-top"><div><div class="fin-metric-icon">🏷️</div><div class="fin-metric-label">Total Produk</div></div></div>
+          <div class="fin-metric-value" id="p-total-produk">0</div>
+        </div>
+        <div class="fin-metric fm-accent">
+          <div class="fin-metric-top"><div><div class="fin-metric-icon">🎨</div><div class="fin-metric-label">Total Varian</div></div></div>
+          <div class="fin-metric-value" id="p-total-varian">0</div>
+        </div>
+        <div class="fin-metric fm-accent">
+          <div class="fin-metric-top"><div><div class="fin-metric-icon">📁</div><div class="fin-metric-label">Total Kategori</div></div></div>
+          <div class="fin-metric-value" id="p-total-kat">0</div>
+        </div>
+        <div class="fin-metric fm-danger">
+          <div class="fin-metric-top"><div><div class="fin-metric-icon">⚠️</div><div class="fin-metric-label">Produk Kritis</div></div></div>
+          <div class="fin-metric-value" id="p-kritis">0</div>
+        </div>
       </div>
       <div class="grid-2 mb18">
         <div class="card">
